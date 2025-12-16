@@ -115,6 +115,24 @@ export function getRedis(): Redis {
 
 export function getRedisConnection() {
   const redisUrl = process.env.REDIS_URL
+  const redisHost = process.env.REDIS_HOST
+  const redisPort = process.env.REDIS_PORT
+  const redisPassword = process.env.REDIS_PASSWORD
+
+  // If we have individual env vars, prefer them (more reliable for BullMQ)
+  if (redisHost && redisPort) {
+    const host = redisHost.trim()
+    const port = Number.parseInt(redisPort)
+    const password = redisPassword || undefined
+
+    console.log(`[Redis] Using connection object from env vars: ${host}:${port}${password ? ' (with password)' : ''}`)
+    return {
+      host,
+      port,
+      password,
+      maxRetriesPerRequest: null,
+    }
+  }
 
   // BullMQ supports both URL string and connection object
   // Prefer URL if available as it's more reliable
@@ -126,6 +144,8 @@ export function getRedisConnection() {
         // URL is valid, log connection info (without password) for debugging
         const safeUrl = `redis://${parsed.username || 'default'}@${parsed.hostname}:${parsed.port || '6379'}`
         console.log(`[Redis] Using REDIS_URL: ${safeUrl}`)
+
+        // Return the URL - BullMQ will parse it
         return redisUrl
       }
       catch (error) {
