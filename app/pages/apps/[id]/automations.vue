@@ -187,6 +187,15 @@ function getFrequencyLabel(frequency: string) {
   return frequency === 'DAILY' ? 'Diária' : 'Semanal'
 }
 
+function toggleDayOfWeek(dayIndex: number) {
+  if (formData.value.daysOfWeek.includes(dayIndex)) {
+    formData.value.daysOfWeek = formData.value.daysOfWeek.filter(d => d !== dayIndex)
+  }
+  else {
+    formData.value.daysOfWeek.push(dayIndex)
+  }
+}
+
 const daysOfWeekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 </script>
 
@@ -393,13 +402,7 @@ const daysOfWeekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
                   :key="index"
                   :variant="formData.daysOfWeek.includes(index) ? 'default' : 'outline'"
                   size="sm"
-                  @click="
-                    if (formData.daysOfWeek.includes(index)) {
-                      formData.daysOfWeek = formData.daysOfWeek.filter(d => d !== index)
-                    } else {
-                      formData.daysOfWeek.push(index)
-                    }
-                  "
+                  @click="toggleDayOfWeek(index)"
                 >
                   {{ label }}
                 </Button>
