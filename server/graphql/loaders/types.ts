@@ -11,6 +11,7 @@ export interface DataLoaders {
   notificationLoader: DataLoader<string, typeof tables.notification.$inferSelect | null>
   deliveryLogLoader: DataLoader<string, typeof tables.deliveryLog.$inferSelect | null>
   apiKeyLoader: DataLoader<string, typeof tables.apiKey.$inferSelect | null>
+  automationLoader: DataLoader<string, typeof tables.automation.$inferSelect | null>
 
   // Relation loaders
   devicesByAppLoader: DataLoader<string, (typeof tables.device.$inferSelect)[]>
@@ -18,4 +19,5 @@ export interface DataLoaders {
   apiKeysByAppLoader: DataLoader<string, (typeof tables.apiKey.$inferSelect)[]>
   deliveryLogsByNotificationLoader: DataLoader<string, (typeof tables.deliveryLog.$inferSelect)[]>
   deliveryLogsByDeviceLoader: DataLoader<string, (typeof tables.deliveryLog.$inferSelect)[]>
+  automationsByAppLoader: DataLoader<string, (typeof tables.automation.$inferSelect)[]>
 }

@@ -1,4 +1,5 @@
 import { defineMutation } from 'nitro-graphql/utils/define'
+import { processSubscriptionAutomations } from '~~/server/utils/automation'
 
 export const registerDeviceMutation = defineMutation({
   registerDevice: {
@@ -103,7 +104,19 @@ export const registerDeviceMutation = defineMutation({
         })
         .returning()
 
-      return device[0]
+      const registeredDevice = device[0]
+
+      // Processar automações de inscrição em background (não bloquear resposta)
+      processSubscriptionAutomations(
+        input.appId,
+        registeredDevice.id,
+        db,
+        tables,
+      ).catch((error) => {
+        console.error('[Automation] Error processing subscription automations:', error)
+      })
+
+      return registeredDevice
     },
   },
 })

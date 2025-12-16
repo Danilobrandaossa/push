@@ -1,0 +1,88 @@
+enum AutomationType {
+  SUBSCRIPTION
+  RECURRING
+}
+
+enum AutomationFrequency {
+  DAILY
+  WEEKLY
+}
+
+type Automation {
+  id: ID!
+  appId: ID!
+  app: App
+  name: String!
+  description: String
+  type: AutomationType!
+  isActive: Boolean!
+  
+  # Template da notificação
+  notificationTemplate: JSON!
+  
+  # Para automação SUBSCRIPTION
+  delayMinutes: Int
+  
+  # Para automação RECURRING
+  frequency: AutomationFrequency
+  timeOfDay: String # Formato HH:MM
+  daysOfWeek: JSON # Array de números 0-6 (0 = domingo)
+  startDate: Timestamp
+  endDate: Timestamp
+  nextRunAt: Timestamp
+  
+  # Relations
+  notifications: [Notification!]
+  
+  # Timestamps
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+}
+
+input CreateAutomationInput {
+  appId: ID!
+  name: String!
+  description: String
+  type: AutomationType!
+  notificationTemplate: JSON!
+  
+  # Para SUBSCRIPTION
+  delayMinutes: Int
+  
+  # Para RECURRING
+  frequency: AutomationFrequency
+  timeOfDay: String
+  daysOfWeek: JSON
+  startDate: Timestamp
+  endDate: Timestamp
+}
+
+input UpdateAutomationInput {
+  name: String
+  description: String
+  isActive: Boolean
+  notificationTemplate: JSON
+  
+  # Para SUBSCRIPTION
+  delayMinutes: Int
+  
+  # Para RECURRING
+  frequency: AutomationFrequency
+  timeOfDay: String
+  daysOfWeek: JSON
+  startDate: Timestamp
+  endDate: Timestamp
+}
+
+extend type Query {
+  automations(appId: ID): [Automation!]!
+  automation(id: ID!): Automation
+}
+
+extend type Mutation {
+  createAutomation(input: CreateAutomationInput!): Automation!
+  updateAutomation(id: ID!, input: UpdateAutomationInput!): Automation!
+  deleteAutomation(id: ID!): Boolean!
+  toggleAutomation(id: ID!): Automation!
+}
+

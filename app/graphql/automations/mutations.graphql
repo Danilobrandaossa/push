@@ -1,0 +1,53 @@
+mutation createAutomation($input: CreateAutomationInput!) {
+  createAutomation(input: $input) {
+    id
+    appId
+    name
+    description
+    type
+    isActive
+    notificationTemplate
+    delayMinutes
+    frequency
+    timeOfDay
+    daysOfWeek
+    startDate
+    endDate
+    nextRunAt
+    createdAt
+    updatedAt
+  }
+}
+
+mutation updateAutomation($id: ID!, $input: UpdateAutomationInput!) {
+  updateAutomation(id: $id, input: $input) {
+    id
+    appId
+    name
+    description
+    type
+    isActive
+    notificationTemplate
+    delayMinutes
+    frequency
+    timeOfDay
+    daysOfWeek
+    startDate
+    endDate
+    nextRunAt
+    createdAt
+    updatedAt
+  }
+}
+
+mutation deleteAutomation($id: ID!) {
+  deleteAutomation(id: $id)
+}
+
+mutation toggleAutomation($id: ID!) {
+  toggleAutomation(id: $id) {
+    id
+    isActive
+  }
+}
+

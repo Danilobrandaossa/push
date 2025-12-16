@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Badge } from 'abckit/shadcn/badge'
 import { Button } from 'abckit/shadcn/button'
 import { Card, CardContent, CardHeader, CardTitle } from 'abckit/shadcn/card'
 import { Checkbox } from 'abckit/shadcn/checkbox'
@@ -16,6 +17,7 @@ definePageMeta({
 const { data: appsData, isLoading: _appsLoading } = useApps()
 const apps = computed(() => appsData.value || [])
 const { mutateAsync: sendNotificationMutation, isLoading: isSendingNotification } = useSendNotification()
+const { mutateAsync: scheduleNotificationMutation, isLoading: isSchedulingNotification } = useScheduleNotification()
 
 // Reactive data
 const form = ref({
@@ -36,6 +38,14 @@ const selectedPlatforms = ref<string[]>([])
 const deviceIds = ref('')
 const scheduleType = ref('now')
 const scheduledAt = ref('')
+
+// Multiple schedule
+const multipleScheduleEnabled = ref(false)
+const selectedDays = ref<number[]>([])
+const scheduleTimes = ref<Array<{ date: string; times: string[] }>>([])
+const newTime = ref('')
+
+const daysOfWeekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
 // Computed
 const selectedApp = computed(() => {
@@ -59,13 +69,65 @@ function getTargetDescription() {
   return 'Unknown'
 }
 
+function getTotalNotificationsCount() {
+  if (!multipleScheduleEnabled.value || scheduleTimes.value.length === 0)
+    return 1
+  return scheduleTimes.value.reduce((sum, st) => sum + st.times.length, 0)
+}
+
+function addScheduleTime() {
+  if (!newTime.value || !selectedDays.value.length)
+    return
+
+  const time = newTime.value.trim()
+  if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time))
+    return
+
+  // Adicionar para cada dia selecionado - calcular próxima ocorrência de cada dia
+  for (const day of selectedDays.value) {
+    const today = new Date()
+    const dayOfWeek = today.getDay()
+    let daysUntil = day - dayOfWeek
+    
+    // Se o dia já passou esta semana, usar próxima semana
+    if (daysUntil <= 0)
+      daysUntil += 7
+    
+    const targetDate = new Date(today)
+    targetDate.setDate(today.getDate() + daysUntil)
+    const dateStr = targetDate.toISOString().split('T')[0]
+
+    const existing = scheduleTimes.value.find(st => st.date === dateStr)
+    if (existing) {
+      if (!existing.times.includes(time))
+        existing.times.push(time)
+    }
+    else {
+      scheduleTimes.value.push({ date: dateStr, times: [time] })
+    }
+  }
+
+  newTime.value = ''
+  // Ordenar por data
+  scheduleTimes.value.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+function removeScheduleTime(date: string, time: string) {
+  const schedule = scheduleTimes.value.find(st => st.date === date)
+  if (schedule) {
+    schedule.times = schedule.times.filter(t => t !== time)
+    if (schedule.times.length === 0)
+      scheduleTimes.value = scheduleTimes.value.filter(st => st.date !== date)
+  }
+}
+
 async function sendNotification() {
   if (!form.value.appId || !form.value.title || !form.value.body)
     return
 
   try {
     // Prepare payload
-    const payload = {
+    const payload: any = {
       appId: form.value.appId,
       title: form.value.title,
       body: form.value.body,
@@ -76,10 +138,20 @@ async function sendNotification() {
       platforms: targetType.value === 'platform'
         ? selectedPlatforms.value
         : undefined,
-      scheduledAt: scheduleType.value === 'later' ? scheduledAt.value : undefined,
     }
 
-    await sendNotificationMutation(payload)
+    // Agendamento múltiplo ou único
+    if (multipleScheduleEnabled.value && scheduleTimes.value.length > 0) {
+      payload.scheduleTimes = scheduleTimes.value
+      await scheduleNotificationMutation(payload)
+    }
+    else if (scheduleType.value === 'later' && scheduledAt.value) {
+      payload.scheduledAt = scheduledAt.value
+      await scheduleNotificationMutation(payload)
+    }
+    else {
+      await sendNotificationMutation(payload)
+    }
 
     console.log('Notification sent successfully!')
     // TODO: Show success toast and redirect to notification details
@@ -109,6 +181,10 @@ function resetForm() {
   deviceIds.value = ''
   scheduleType.value = 'now'
   scheduledAt.value = ''
+  multipleScheduleEnabled.value = false
+  selectedDays.value = []
+  scheduleTimes.value = []
+  newTime.value = ''
 }
 
 // Apps are automatically loaded by useApps() composable
@@ -297,39 +373,142 @@ function resetForm() {
               </div>
 
               <!-- Schedule -->
-              <div class="space-y-2">
+              <div class="space-y-4">
                 <Label>Schedule</Label>
-                <div class="flex items-center space-x-2">
-                  <Checkbox
-                    id="send-now"
-                    :model-value="scheduleType === 'now'"
-                    @update:model-value="scheduleType = 'now'"
-                  />
-                  <Label for="send-now">Send now</Label>
+                <div class="space-y-2">
+                  <div class="flex items-center space-x-2">
+                    <Checkbox
+                      id="send-now"
+                      :model-value="scheduleType === 'now' && !multipleScheduleEnabled"
+                      @update:model-value="scheduleType = 'now'; multipleScheduleEnabled = false"
+                    />
+                    <Label for="send-now">Send now</Label>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <Checkbox
+                      id="schedule-later"
+                      :model-value="scheduleType === 'later' && !multipleScheduleEnabled"
+                      @update:model-value="scheduleType = 'later'; multipleScheduleEnabled = false"
+                    />
+                    <Label for="schedule-later">Schedule for later (single)</Label>
+                  </div>
+                  <div v-if="scheduleType === 'later' && !multipleScheduleEnabled" class="ml-6">
+                    <Input
+                      v-model="scheduledAt"
+                      type="datetime-local"
+                      :min="new Date().toISOString().slice(0, 16)"
+                    />
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <Checkbox
+                      id="multiple-schedule"
+                      :model-value="multipleScheduleEnabled"
+                      @update:model-value="multipleScheduleEnabled = $event; if ($event) scheduleType = 'later'"
+                    />
+                    <Label for="multiple-schedule">Multiple schedule (days + times)</Label>
+                  </div>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <Checkbox
-                    id="schedule-later"
-                    :model-value="scheduleType === 'later'"
-                    @update:model-value="scheduleType = 'later'"
-                  />
-                  <Label for="schedule-later">Schedule for later</Label>
-                </div>
-                <div v-if="scheduleType === 'later'" class="ml-6">
-                  <Input
-                    v-model="scheduledAt"
-                    type="datetime-local"
-                    :min="new Date().toISOString().slice(0, 16)"
-                  />
+
+                <!-- Multiple Schedule UI -->
+                <div v-if="multipleScheduleEnabled" class="ml-6 space-y-4 border-l-2 pl-4">
+                  <div>
+                    <Label>Selecionar Dias da Semana</Label>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                      <Button
+                        v-for="(label, index) in daysOfWeekLabels"
+                        :key="index"
+                        :variant="selectedDays.includes(index) ? 'default' : 'outline'"
+                        size="sm"
+                        @click="
+                          if (selectedDays.includes(index)) {
+                            selectedDays = selectedDays.filter(d => d !== index)
+                          } else {
+                            selectedDays.push(index)
+                          }
+                        "
+                      >
+                        {{ label }}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Adicionar Horário</Label>
+                    <div class="flex gap-2 mt-2">
+                      <Input
+                        v-model="newTime"
+                        type="time"
+                        placeholder="09:00"
+                        class="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        :disabled="!newTime || selectedDays.length === 0"
+                        @click="addScheduleTime"
+                      >
+                        Adicionar
+                      </Button>
+                    </div>
+                    <p class="text-xs text-muted-foreground mt-1">
+                      Selecione os dias e adicione horários para cada dia
+                    </p>
+                  </div>
+
+                  <div v-if="scheduleTimes.length > 0" class="space-y-2">
+                    <Label>Horários Agendados ({{ getTotalNotificationsCount() }} notificações serão criadas)</Label>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                      <div
+                        v-for="schedule in scheduleTimes"
+                        :key="schedule.date"
+                        class="p-2 border rounded"
+                      >
+                        <div class="font-medium mb-1">
+                          {{ new Date(schedule.date).toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                          <Badge
+                            v-for="time in schedule.times"
+                            :key="time"
+                            variant="secondary"
+                            class="flex items-center gap-1"
+                          >
+                            {{ time }}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              class="h-4 w-4 p-0"
+                              @click="removeScheduleTime(schedule.date, time)"
+                            >
+                              <Icon name="lucide:x" class="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <!-- Submit -->
               <div class="flex space-x-2">
-                <Button type="submit" :disabled="!form.appId || !form.title || !form.body || isSendingNotification" class="flex-1">
-                  <Icon v-if="isSendingNotification" name="lucide:loader-2" class="size-4 mr-2 animate-spin" />
+                <Button
+                  type="submit"
+                  :disabled="!form.appId || !form.title || !form.body || isSendingNotification || isSchedulingNotification || (multipleScheduleEnabled && scheduleTimes.length === 0)"
+                  class="flex-1"
+                >
+                  <Icon
+                    v-if="isSendingNotification || isSchedulingNotification"
+                    name="lucide:loader-2"
+                    class="size-4 mr-2 animate-spin"
+                  />
                   <Icon name="lucide:send" class="size-4 mr-2" />
-                  {{ scheduleType === 'now' ? 'Send Now' : 'Schedule' }}
+                  {{
+                    scheduleType === 'now'
+                      ? 'Send Now'
+                      : multipleScheduleEnabled
+                        ? `Schedule ${getTotalNotificationsCount()} Notifications`
+                        : 'Schedule'
+                  }}
                 </Button>
                 <Button type="button" variant="outline" @click="resetForm">
                   Reset
@@ -394,7 +573,15 @@ function resetForm() {
               </div>
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Schedule:</span>
-                <span>{{ scheduleType === 'now' ? 'Send immediately' : 'Scheduled' }}</span>
+                <span>
+                  {{
+                    scheduleType === 'now'
+                      ? 'Send immediately'
+                      : multipleScheduleEnabled
+                        ? `${getTotalNotificationsCount()} scheduled`
+                        : 'Scheduled'
+                  }}
+                </span>
               </div>
             </div>
           </CardContent>

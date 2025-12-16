@@ -32,6 +32,12 @@ const navigationItems = [
     current: route.path === `/apps/${_props.appId}/notifications`,
   },
   {
+    name: 'Automations',
+    href: `/apps/${_props.appId}/automations`,
+    icon: 'lucide:zap',
+    current: route.path === `/apps/${_props.appId}/automations`,
+  },
+  {
     name: 'Settings',
     href: `/apps/${_props.appId}/settings`,
     icon: 'lucide:cog',

@@ -53,6 +53,7 @@ export function useSendNotification() {
       targetDevices?: string[]
       platforms?: string[]
       scheduledAt?: string
+      scheduleTimes?: Array<{ date: string; times: string[] }>
       imageUrl?: string
       clickAction?: string
       sound?: string
@@ -60,6 +61,28 @@ export function useSendNotification() {
     }) => {
       const result = await $sdk.sendNotification({ input })
       return result.data?.sendNotification || null
+    },
+  })
+}
+
+export function useScheduleNotification() {
+  return useMutation({
+    mutation: async (input: {
+      appId: string
+      title: string
+      body: string
+      data?: any
+      targetDevices?: string[]
+      platforms?: string[]
+      scheduledAt?: string
+      scheduleTimes?: Array<{ date: string; times: string[] }>
+      imageUrl?: string
+      clickAction?: string
+      sound?: string
+      badge?: number
+    }) => {
+      const result = await $sdk.scheduleNotification({ input })
+      return result.data?.scheduleNotification || null
     },
   })
 }

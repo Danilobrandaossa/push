@@ -15,6 +15,13 @@
       "when": 1765814809642,
       "tag": "0001_striped_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1737056000000,
+      "tag": "0002_add_automations",
+      "breakpoints": true
     }
   ]
 }

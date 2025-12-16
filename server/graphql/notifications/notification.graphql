@@ -63,6 +63,11 @@ type DeliveryLog {
   updatedAt: Timestamp!
 }
 
+input ScheduleTimeInput {
+  date: String! # Data no formato YYYY-MM-DD
+  times: [String!]! # Array de horários no formato HH:MM
+}
+
 input SendNotificationInput {
   appId: ID!
   title: String!
@@ -76,7 +81,8 @@ input SendNotificationInput {
   # Targeting
   targetDevices: JSON # Array of device IDs or tokens
   platforms: JSON # Array of platforms
-  scheduledAt: Timestamp
+  scheduledAt: Timestamp # Para agendamento único (legado)
+  scheduleTimes: [ScheduleTimeInput!] # Para agendamento múltiplo (novo)
 }
 
 extend type Query {

@@ -3,12 +3,14 @@ import { integer, pgTable, text, uuid } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { customJsonb, customTimestamp, uuidv7Generator } from '../shared'
 import { app } from './app'
+import { automation } from './automation'
 import { deliveryLog } from './deliveryLog'
 import { notificationStatusEnum } from './enums'
 
 export const notification = pgTable('notification', {
   id: uuid().primaryKey().$defaultFn(uuidv7Generator),
   appId: uuid().notNull().references(() => app.id, { onDelete: 'cascade' }),
+  automationId: uuid().references(() => automation.id, { onDelete: 'set null' }),
   title: text().notNull(),
   body: text().notNull(),
   data: customJsonb(),
@@ -37,6 +39,10 @@ export const notificationRelations = relations(notification, ({ one, many }) => 
   app: one(app, {
     fields: [notification.appId],
     references: [app.id],
+  }),
+  automation: one(automation, {
+    fields: [notification.automationId],
+    references: [automation.id],
   }),
   deliveryLogs: many(deliveryLog),
 }))

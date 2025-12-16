@@ -23,3 +23,29 @@ mutation sendNotification($input: SendNotificationInput!) {
     sentAt
   }
 }
+
+mutation scheduleNotification($input: SendNotificationInput!) {
+  scheduleNotification(input: $input) {
+    id
+    appId
+    title
+    body
+    data
+    badge
+    sound
+    clickAction
+    imageUrl
+    targetDevices
+    platforms
+    scheduledAt
+    status
+    totalTargets
+    totalSent
+    totalDelivered
+    totalFailed
+    totalClicked
+    createdAt
+    updatedAt
+    sentAt
+  }
+}

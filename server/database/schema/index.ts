@@ -1,5 +1,6 @@
 export * from './apiKey'
 export * from './app'
+export * from './automation'
 export * from './deliveryLog'
 export * from './device'
 export * from './enums'

@@ -1,6 +1,7 @@
 import { defineSchema } from 'nitro-graphql/utils/define'
 import { selectApiKeySchema } from '~~/server/database/schema/apiKey'
 import { selectAppSchema } from '~~/server/database/schema/app'
+import { selectAutomationSchema } from '~~/server/database/schema/automation'
 import { selectDeliveryLogSchema } from '~~/server/database/schema/deliveryLog'
 import { selectDeviceSchema } from '~~/server/database/schema/device'
 import { selectNotificationSchema } from '~~/server/database/schema/notification'
@@ -11,4 +12,5 @@ export default defineSchema({
   Notification: selectNotificationSchema,
   DeliveryLog: selectDeliveryLogSchema,
   ApiKey: selectApiKeySchema,
+  Automation: selectAutomationSchema,
 })

@@ -1,6 +1,7 @@
 import type { Database, DataLoaders } from './types'
 import { createApiKeyLoader, createApiKeysByAppLoader } from './apiKey.loader'
 import { createAppLoader } from './app.loader'
+import { createAutomationLoader, createAutomationsByAppLoader } from './automation.loader'
 import { createDeliveryLogLoader, createDeliveryLogsByDeviceLoader, createDeliveryLogsByNotificationLoader } from './deliveryLog.loader'
 import { createDeviceLoader, createDevicesByAppLoader } from './device.loader'
 import { createNotificationLoader, createNotificationsByAppLoader } from './notification.loader'
@@ -15,6 +16,7 @@ export function createDataLoaders(db: Database): DataLoaders {
     notificationLoader: createNotificationLoader(db),
     deliveryLogLoader: createDeliveryLogLoader(db),
     apiKeyLoader: createApiKeyLoader(db),
+    automationLoader: createAutomationLoader(db),
 
     // Relation loaders
     devicesByAppLoader: createDevicesByAppLoader(db),
@@ -22,5 +24,6 @@ export function createDataLoaders(db: Database): DataLoaders {
     apiKeysByAppLoader: createApiKeysByAppLoader(db),
     deliveryLogsByNotificationLoader: createDeliveryLogsByNotificationLoader(db),
     deliveryLogsByDeviceLoader: createDeliveryLogsByDeviceLoader(db),
+    automationsByAppLoader: createAutomationsByAppLoader(db),
   }
 }

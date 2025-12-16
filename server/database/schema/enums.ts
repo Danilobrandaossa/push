@@ -15,3 +15,7 @@ export const notificationStatusEnum = pgEnum('notification_status', ['PENDING', 
 export const deviceStatusEnum = pgEnum('device_status', ['ACTIVE', 'INACTIVE', 'EXPIRED'])
 
 export const deliveryStatusEnum = pgEnum('delivery_status', ['PENDING', 'SENT', 'DELIVERED', 'FAILED', 'CLICKED'])
+
+export const automationTypeEnum = pgEnum('automation_type', ['SUBSCRIPTION', 'RECURRING'])
+
+export const automationFrequencyEnum = pgEnum('automation_frequency', ['DAILY', 'WEEKLY'])

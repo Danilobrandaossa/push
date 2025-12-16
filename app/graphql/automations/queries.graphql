@@ -1,0 +1,42 @@
+query automations($appId: ID) {
+  automations(appId: $appId) {
+    id
+    appId
+    name
+    description
+    type
+    isActive
+    notificationTemplate
+    delayMinutes
+    frequency
+    timeOfDay
+    daysOfWeek
+    startDate
+    endDate
+    nextRunAt
+    createdAt
+    updatedAt
+  }
+}
+
+query automation($id: ID!) {
+  automation(id: $id) {
+    id
+    appId
+    name
+    description
+    type
+    isActive
+    notificationTemplate
+    delayMinutes
+    frequency
+    timeOfDay
+    daysOfWeek
+    startDate
+    endDate
+    nextRunAt
+    createdAt
+    updatedAt
+  }
+}
+
