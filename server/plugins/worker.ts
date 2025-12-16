@@ -7,10 +7,21 @@ export default defineNitroPlugin((nitroApp) => {
     return
   }
 
+  // Skip worker if Redis is disabled
+  if (process.env.REDIS_ENABLED === 'false') {
+    console.log('[WorkerPlugin] Worker disabled (REDIS_ENABLED=false)')
+    return
+  }
+
   // Start the notification worker
   try {
-    startNotificationWorker()
-    console.log('[WorkerPlugin] Notification worker started')
+    const worker = startNotificationWorker()
+    if (worker) {
+      console.log('[WorkerPlugin] Notification worker started')
+    }
+    else {
+      console.warn('[WorkerPlugin] Notification worker not started (Redis unavailable). Set REDIS_ENABLED=false to suppress this warning.')
+    }
   }
   catch (error) {
     console.error('[WorkerPlugin] Failed to start notification worker:', error)

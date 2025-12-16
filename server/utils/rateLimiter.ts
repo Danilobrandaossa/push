@@ -70,9 +70,11 @@ export class RateLimiter {
         resetAt: now + (windowSeconds * 1000),
       }
     }
-    catch (error) {
-      // On Redis error, allow request but log warning
-      console.warn('[RateLimiter] Redis error, allowing request:', error)
+    catch (error: any) {
+      // On Redis error, allow request but log warning (only for non-connection errors)
+      if (!error.message?.includes('ECONNREFUSED') && !error.message?.includes('connect')) {
+        console.warn('[RateLimiter] Redis error, allowing request:', error.message)
+      }
       return {
         allowed: true,
         remaining: limit,
@@ -94,8 +96,11 @@ export class RateLimiter {
       // Set expiration on the key
       await redis.expire(redisKey, windowSeconds + 60) // Add buffer
     }
-    catch (error) {
-      console.warn('[RateLimiter] Failed to consume rate limit:', error)
+    catch (error: any) {
+      // Only log non-connection errors
+      if (!error.message?.includes('ECONNREFUSED') && !error.message?.includes('connect')) {
+        console.warn('[RateLimiter] Failed to consume rate limit:', error.message)
+      }
     }
   }
 
@@ -106,8 +111,11 @@ export class RateLimiter {
     try {
       await redis.del(redisKey)
     }
-    catch (error) {
-      console.warn('[RateLimiter] Failed to reset rate limit:', error)
+    catch (error: any) {
+      // Only log non-connection errors
+      if (!error.message?.includes('ECONNREFUSED') && !error.message?.includes('connect')) {
+        console.warn('[RateLimiter] Failed to reset rate limit:', error.message)
+      }
     }
   }
 
@@ -133,8 +141,11 @@ export class RateLimiter {
         resetAt: now + (windowSeconds * 1000),
       }
     }
-    catch (error) {
-      console.warn('[RateLimiter] Failed to get status:', error)
+    catch (error: any) {
+      // Only log non-connection errors
+      if (!error.message?.includes('ECONNREFUSED') && !error.message?.includes('connect')) {
+        console.warn('[RateLimiter] Failed to get status:', error.message)
+      }
       return {
         allowed: true,
         remaining: limit,

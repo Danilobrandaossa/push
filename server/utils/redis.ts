@@ -11,14 +11,35 @@ export function getRedis(): Redis {
       maxRetriesPerRequest: null, // Required for BullMQ
       enableReadyCheck: false,
       lazyConnect: true,
+      retryStrategy: (times) => {
+        if (times > 10) {
+          console.warn('[Redis] Max retries reached, giving up connection')
+          return null // Stop retrying
+        }
+        return Math.min(times * 200, 2000) // Exponential backoff
+      },
+      reconnectOnError: (err) => {
+        const targetError = 'READONLY'
+        if (err.message.includes(targetError)) {
+          return true
+        }
+        return false
+      },
     })
 
     redisInstance.on('error', (err) => {
-      console.error('[Redis] Connection error:', err.message)
+      // Only log error if not a connection refused (expected when Redis is not available)
+      if (!err.message.includes('ECONNREFUSED')) {
+        console.error('[Redis] Connection error:', err.message)
+      }
     })
 
     redisInstance.on('connect', () => {
       console.log('[Redis] Connected successfully')
+    })
+
+    redisInstance.on('ready', () => {
+      console.log('[Redis] Ready')
     })
   }
 

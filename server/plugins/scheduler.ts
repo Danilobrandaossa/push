@@ -83,24 +83,35 @@ async function processScheduledNotifications() {
 
         // Queue jobs for each device
         for (const dev of targetDevices) {
-          await addSendNotificationJob({
-            notificationId: notif.id,
-            deviceId: dev.id,
-            appId: notif.appId,
-            platform: dev.platform.toLowerCase() as 'ios' | 'android' | 'web',
-            token: dev.token,
-            webPushP256dh: dev.webPushP256dh || undefined,
-            webPushAuth: dev.webPushAuth || undefined,
-            payload: {
-              title: notif.title,
-              body: notif.body,
-              data: notif.data as Record<string, any> | undefined,
-              badge: notif.badge || undefined,
-              sound: notif.sound || undefined,
-              clickAction: notif.clickAction || undefined,
-              imageUrl: notif.imageUrl || undefined,
-            },
-          })
+          try {
+            await addSendNotificationJob({
+              notificationId: notif.id,
+              deviceId: dev.id,
+              appId: notif.appId,
+              platform: dev.platform.toLowerCase() as 'ios' | 'android' | 'web',
+              token: dev.token,
+              webPushP256dh: dev.webPushP256dh || undefined,
+              webPushAuth: dev.webPushAuth || undefined,
+              payload: {
+                title: notif.title,
+                body: notif.body,
+                data: notif.data as Record<string, any> | undefined,
+                badge: notif.badge || undefined,
+                sound: notif.sound || undefined,
+                clickAction: notif.clickAction || undefined,
+                imageUrl: notif.imageUrl || undefined,
+              },
+            })
+          }
+          catch (error: any) {
+            // If Redis is not available, log warning but continue
+            if (error.message?.includes('ECONNREFUSED') || error.message?.includes('connect')) {
+              console.warn(`[Scheduler] Redis not available, notification ${notif.id} job not queued. Will be processed by scheduler.`)
+            }
+            else {
+              throw error
+            }
+          }
         }
 
         // Update status to SENT

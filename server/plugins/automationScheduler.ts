@@ -2,7 +2,6 @@ import { and, eq, lte } from 'drizzle-orm'
 import { getDatabase } from '../database/connection'
 import { automation, notification } from '../database/schema'
 import { calculateNextRunAt, shouldRunToday } from '../utils/automation'
-import { addSendNotificationJob } from '../queues/notification.queue'
 
 const SCHEDULER_INTERVAL = 3600000 // 1 hora
 const BATCH_SIZE = 50
