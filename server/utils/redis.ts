@@ -135,43 +135,70 @@ export function getRedisConnection() {
     }
     else {
       // URL is invalid or incomplete
-      console.error('[Redis] REDIS_URL is invalid or incomplete')
-      console.error('[Redis] Expected format: redis://[username]:[password]@[host]:[port]')
+      console.warn('[Redis] REDIS_URL is invalid or incomplete')
+      console.warn('[Redis] Expected format: redis://[username]:[password]@[host]:[port]')
       const safeUrl = redisUrl.replace(/:[^:@]+@/, ':****@')
-      console.error(`[Redis] Current value: ${safeUrl}`)
+      console.warn(`[Redis] Current value: ${safeUrl}`)
+      console.warn('[Redis] Falling back to REDIS_HOST/REDIS_PORT or localhost:6379')
 
       // Try to extract password and username from incomplete URL
       const passwordMatch = redisUrl.match(/:[^:@]+@/)
       const usernameMatch = redisUrl.match(/^redis:\/\/([^:]+):/)
 
-      if (passwordMatch || usernameMatch) {
-        const extractedPassword = passwordMatch ? passwordMatch[0].slice(1, -1) : undefined
-        const extractedUsername = usernameMatch ? usernameMatch[1] : undefined
+      const extractedPassword = passwordMatch ? passwordMatch[0].slice(1, -1) : undefined
 
-        // Use extracted values if individual env vars are not set
-        const host = process.env.REDIS_HOST || 'localhost'
-        const port = Number.parseInt(process.env.REDIS_PORT || '6379')
-        const password = process.env.REDIS_PASSWORD || extractedPassword
+      // Use extracted values if individual env vars are not set
+      let host = process.env.REDIS_HOST
+      const port = Number.parseInt(process.env.REDIS_PORT || '6379')
+      const password = process.env.REDIS_PASSWORD || extractedPassword
 
-        if (extractedPassword) {
-          console.log('[Redis] Extracted password from REDIS_URL, using connection object')
-        }
-
+      // Validate and sanitize host
+      if (!host || host === 'undefined' || host === '' || host.trim() === '') {
+        console.error('[Redis] Host is undefined or empty. Cannot connect to Redis.')
+        console.error('[Redis] Please set REDIS_HOST environment variable or provide a complete REDIS_URL')
+        console.error('[Redis] Example: REDIS_URL=redis://default:password@host:6379')
+        console.error('[Redis] Or: REDIS_HOST=your-redis-host REDIS_PORT=6379 REDIS_PASSWORD=your-password')
+        // Return a connection object that will fail gracefully (but won't try to connect to undefined)
         return {
-          host,
-          port,
-          password,
+          host: 'localhost',
+          port: 6379,
+          password: undefined,
           maxRetriesPerRequest: null,
         }
       }
-      // Fall through to use individual env vars
+
+      host = host.trim()
+
+      if (extractedPassword && !process.env.REDIS_PASSWORD) {
+        console.log(`[Redis] Extracted password from REDIS_URL, using connection object: ${host}:${port}`)
+      }
+      else {
+        console.log(`[Redis] Using connection object: ${host}:${port}${password ? ' (with password)' : ''}`)
+      }
+
+      return {
+        host,
+        port,
+        password,
+        maxRetriesPerRequest: null,
+      }
     }
   }
 
   // Fallback to connection object
-  const host = process.env.REDIS_HOST || 'localhost'
+  let host = process.env.REDIS_HOST
   const port = Number.parseInt(process.env.REDIS_PORT || '6379')
   const password = process.env.REDIS_PASSWORD || undefined
+
+  // Validate and sanitize host
+  if (!host || host === 'undefined' || host === '' || host.trim() === '') {
+    console.warn('[Redis] REDIS_HOST not set, using localhost as fallback')
+    host = 'localhost'
+  }
+  else {
+    host = host.trim()
+  }
+
   console.log(`[Redis] Using connection object: ${host}:${port}${password ? ' (with password)' : ''}`)
   return {
     host,
