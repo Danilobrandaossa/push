@@ -121,6 +121,15 @@ function removeScheduleTime(date: string, time: string) {
   }
 }
 
+function toggleDaySelection(dayIndex: number) {
+  if (selectedDays.value.includes(dayIndex)) {
+    selectedDays.value = selectedDays.value.filter(d => d !== dayIndex)
+  }
+  else {
+    selectedDays.value.push(dayIndex)
+  }
+}
+
 async function sendNotification() {
   if (!form.value.appId || !form.value.title || !form.value.body)
     return
@@ -419,13 +428,7 @@ function resetForm() {
                         :key="index"
                         :variant="selectedDays.includes(index) ? 'default' : 'outline'"
                         size="sm"
-                        @click="
-                          if (selectedDays.includes(index)) {
-                            selectedDays = selectedDays.filter(d => d !== index)
-                          } else {
-                            selectedDays.push(index)
-                          }
-                        "
+                        @click="toggleDaySelection(index)"
                       >
                         {{ label }}
                       </Button>
