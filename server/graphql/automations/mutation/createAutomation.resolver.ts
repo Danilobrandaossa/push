@@ -7,13 +7,7 @@ export const createAutomationMutation = defineMutation({
       const { useDatabase, tables } = context
       const db = useDatabase()
 
-      // Validação básica
-      if (input.type === 'SUBSCRIPTION' && input.delayMinutes && input.delayMinutes < 0) {
-        throw createError({
-          statusCode: 400,
-          message: 'delayMinutes must be a positive number',
-        })
-      }
+      // Validação básica removida - delayMinutes agora está em cada template
 
       if (input.type === 'RECURRING') {
         if (!input.frequency) {
@@ -36,12 +30,35 @@ export const createAutomationMutation = defineMutation({
         }
       }
 
-      // Validar template de notificação
-      const template = input.notificationTemplate as Record<string, any>
-      if (!template.title || !template.body) {
+      // Validar templates de notificação
+      if (!input.notificationTemplates || input.notificationTemplates.length === 0) {
         throw createError({
           statusCode: 400,
-          message: 'notificationTemplate must contain title and body',
+          message: 'At least one notification template is required',
+        })
+      }
+
+      // Validar cada template
+      for (const template of input.notificationTemplates) {
+        if (!template.title || !template.body) {
+          throw createError({
+            statusCode: 400,
+            message: 'Each notification template must contain title and body',
+          })
+        }
+        if (template.delayMinutes < 0) {
+          throw createError({
+            statusCode: 400,
+            message: 'delayMinutes must be a positive number or zero',
+          })
+        }
+      }
+
+      // O primeiro template deve ter delayMinutes = 0
+      if (input.notificationTemplates[0].delayMinutes !== 0) {
+        throw createError({
+          statusCode: 400,
+          message: 'The first notification template must have delayMinutes = 0',
         })
       }
 
@@ -67,8 +84,7 @@ export const createAutomationMutation = defineMutation({
           description: input.description,
           type: input.type,
           isActive: true,
-          notificationTemplate: input.notificationTemplate,
-          delayMinutes: input.delayMinutes,
+          notificationTemplates: input.notificationTemplates,
           frequency: input.frequency,
           timeOfDay: input.timeOfDay,
           daysOfWeek: input.daysOfWeek,

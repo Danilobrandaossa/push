@@ -71,31 +71,56 @@ async function processRecurringAutomations() {
           continue
         }
 
-        // Criar notificação baseada no template
-        const template = auto.notificationTemplate as Record<string, any>
+        // Criar notificações baseadas nos templates
+        const templates = auto.notificationTemplates as Array<Record<string, any>>
 
-        const newNotification = await db
-          .insert(notification)
-          .values({
-            appId: auto.appId,
-            automationId: auto.id,
-            title: template.title,
-            body: template.body,
-            data: template.data,
-            imageUrl: template.imageUrl,
-            clickAction: template.clickAction,
-            sound: template.sound,
-            badge: template.badge,
-            status: 'PENDING',
-            totalTargets: 0, // Será calculado pelo scheduler de notificações
-            totalSent: 0,
-            totalDelivered: 0,
-            totalFailed: 0,
-            totalClicked: 0,
-          })
-          .returning()
+        if (!templates || templates.length === 0) {
+          console.warn(`[AutomationScheduler] Automation ${auto.id} has no templates, skipping`)
+          continue
+        }
 
-        console.log(`[AutomationScheduler] Created notification ${newNotification[0].id} from automation ${auto.id}`)
+        // Calcular delay acumulado para cada template
+        let accumulatedDelayMinutes = 0
+
+        for (const template of templates) {
+          // Adicionar delay do template atual ao delay acumulado
+          accumulatedDelayMinutes += template.delayMinutes || 0
+
+          // Calcular scheduledAt com delay acumulado
+          let scheduledAt: string | undefined
+          let status: 'PENDING' | 'SCHEDULED' = 'PENDING'
+          
+          if (accumulatedDelayMinutes > 0) {
+            const delayDate = new Date()
+            delayDate.setMinutes(delayDate.getMinutes() + accumulatedDelayMinutes)
+            scheduledAt = delayDate.toISOString()
+            status = 'SCHEDULED'
+          }
+
+          const newNotification = await db
+            .insert(notification)
+            .values({
+              appId: auto.appId,
+              automationId: auto.id,
+              title: template.title,
+              body: template.body,
+              data: template.data,
+              imageUrl: template.imageUrl,
+              clickAction: template.clickAction,
+              sound: template.sound,
+              badge: template.badge,
+              status,
+              scheduledAt,
+              totalTargets: 0, // Será calculado pelo scheduler de notificações
+              totalSent: 0,
+              totalDelivered: 0,
+              totalFailed: 0,
+              totalClicked: 0,
+            })
+            .returning()
+
+          console.log(`[AutomationScheduler] Created notification ${newNotification[0].id} from automation ${auto.id} (delay: ${accumulatedDelayMinutes}min)`)
+        }
 
         // Calcular próximo nextRunAt
         const nextRun = calculateNextRunAt(automationData)

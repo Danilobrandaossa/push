@@ -25,12 +25,35 @@ export const updateAutomationMutation = defineMutation({
       const automation = existing[0]
 
       // Validações
-      if (input.notificationTemplate) {
-        const template = input.notificationTemplate as Record<string, any>
-        if (!template.title || !template.body) {
+      if (input.notificationTemplates) {
+        if (input.notificationTemplates.length === 0) {
           throw createError({
             statusCode: 400,
-            message: 'notificationTemplate must contain title and body',
+            message: 'At least one notification template is required',
+          })
+        }
+
+        // Validar cada template
+        for (const template of input.notificationTemplates) {
+          if (!template.title || !template.body) {
+            throw createError({
+              statusCode: 400,
+              message: 'Each notification template must contain title and body',
+            })
+          }
+          if (template.delayMinutes < 0) {
+            throw createError({
+              statusCode: 400,
+              message: 'delayMinutes must be a positive number or zero',
+            })
+          }
+        }
+
+        // O primeiro template deve ter delayMinutes = 0
+        if (input.notificationTemplates[0].delayMinutes !== 0) {
+          throw createError({
+            statusCode: 400,
+            message: 'The first notification template must have delayMinutes = 0',
           })
         }
       }
@@ -43,20 +66,7 @@ export const updateAutomationMutation = defineMutation({
       if (input.name !== undefined) updateData.name = input.name
       if (input.description !== undefined) updateData.description = input.description
       if (input.isActive !== undefined) updateData.isActive = input.isActive
-      if (input.notificationTemplate !== undefined) updateData.notificationTemplate = input.notificationTemplate
-
-      // Campos específicos por tipo
-      if (automation.type === 'SUBSCRIPTION') {
-        if (input.delayMinutes !== undefined) {
-          if (input.delayMinutes < 0) {
-            throw createError({
-              statusCode: 400,
-              message: 'delayMinutes must be a positive number',
-            })
-          }
-          updateData.delayMinutes = input.delayMinutes
-        }
-      }
+      if (input.notificationTemplates !== undefined) updateData.notificationTemplates = input.notificationTemplates
 
       if (automation.type === 'RECURRING') {
         if (input.frequency !== undefined) updateData.frequency = input.frequency

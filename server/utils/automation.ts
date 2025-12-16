@@ -152,40 +152,52 @@ export async function processSubscriptionAutomations(
 
   const deviceToken = device[0].token
 
-  // Para cada automação, criar notificação
+  // Para cada automação, criar notificações para cada template
   for (const automation of automations) {
-    const template = automation.notificationTemplate as Record<string, any>
+    const templates = automation.notificationTemplates as Array<Record<string, any>>
 
-    // Calcular scheduledAt com delay se configurado
-    let scheduledAt: string | undefined
-    if (automation.delayMinutes && automation.delayMinutes > 0) {
-      const delayDate = new Date()
-      delayDate.setMinutes(delayDate.getMinutes() + automation.delayMinutes)
-      scheduledAt = delayDate.toISOString()
+    if (!templates || templates.length === 0) {
+      continue
     }
 
-    // Criar notificação
-    await db
-      .insert(tables.notification)
-      .values({
-        appId,
-        automationId: automation.id,
-        title: template.title,
-        body: template.body,
-        data: template.data,
-        imageUrl: template.imageUrl,
-        clickAction: template.clickAction,
-        sound: template.sound,
-        badge: template.badge,
-        status: scheduledAt ? 'SCHEDULED' : 'PENDING',
-        scheduledAt,
-        targetDevices: [deviceToken], // Enviar apenas para o dispositivo recém-registrado (usar token)
-        totalTargets: 1,
-        totalSent: 0,
-        totalDelivered: 0,
-        totalFailed: 0,
-        totalClicked: 0,
-      })
+    // Calcular delay acumulado para cada template
+    let accumulatedDelayMinutes = 0
+
+    for (const template of templates) {
+      // Adicionar delay do template atual ao delay acumulado
+      accumulatedDelayMinutes += template.delayMinutes || 0
+
+      // Calcular scheduledAt com delay acumulado
+      let scheduledAt: string | undefined
+      if (accumulatedDelayMinutes > 0) {
+        const delayDate = new Date()
+        delayDate.setMinutes(delayDate.getMinutes() + accumulatedDelayMinutes)
+        scheduledAt = delayDate.toISOString()
+      }
+
+      // Criar notificação
+      await db
+        .insert(tables.notification)
+        .values({
+          appId,
+          automationId: automation.id,
+          title: template.title,
+          body: template.body,
+          data: template.data,
+          imageUrl: template.imageUrl,
+          clickAction: template.clickAction,
+          sound: template.sound,
+          badge: template.badge,
+          status: scheduledAt ? 'SCHEDULED' : 'PENDING',
+          scheduledAt,
+          targetDevices: [deviceToken], // Enviar apenas para o dispositivo recém-registrado (usar token)
+          totalTargets: 1,
+          totalSent: 0,
+          totalDelivered: 0,
+          totalFailed: 0,
+          totalClicked: 0,
+        })
+    }
   }
 }
 

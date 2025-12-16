@@ -39,8 +39,16 @@ export function useCreateAutomation() {
       name: string
       description?: string
       type: 'SUBSCRIPTION' | 'RECURRING'
-      notificationTemplate: any
-      delayMinutes?: number
+      notificationTemplates: Array<{
+        title: string
+        body: string
+        data?: any
+        imageUrl?: string
+        clickAction?: string
+        sound?: string
+        badge?: number
+        delayMinutes: number
+      }>
       frequency?: 'DAILY' | 'WEEKLY'
       timeOfDay?: string
       daysOfWeek?: number[]

@@ -14,11 +14,9 @@ export const automation = pgTable('automation', {
   type: automationTypeEnum().notNull(),
   isActive: boolean().default(true).notNull(),
   
-  // Template da notificação (JSON com title, body, data, etc.)
-  notificationTemplate: customJsonb().notNull(),
-  
-  // Para automação de SUBSCRIPTION
-  delayMinutes: integer(), // Delay opcional em minutos antes de enviar
+  // Templates das notificações (array de objetos com title, body, data, delayMinutes, etc.)
+  // Cada template representa um push na sequência da automação
+  notificationTemplates: customJsonb().notNull(),
   
   // Para automação RECURRING
   frequency: automationFrequencyEnum(), // DAILY ou WEEKLY

@@ -8,6 +8,18 @@ enum AutomationFrequency {
   WEEKLY
 }
 
+# Template de notificação individual na sequência da automação
+type NotificationTemplate {
+  title: String!
+  body: String!
+  data: JSON
+  imageUrl: String
+  clickAction: String
+  sound: String
+  badge: Int
+  delayMinutes: Int! # Delay em minutos após o push anterior (0 para o primeiro)
+}
+
 type Automation {
   id: ID!
   appId: ID!
@@ -17,11 +29,8 @@ type Automation {
   type: AutomationType!
   isActive: Boolean!
   
-  # Template da notificação
-  notificationTemplate: JSON!
-  
-  # Para automação SUBSCRIPTION
-  delayMinutes: Int
+  # Templates das notificações (array de pushes na sequência)
+  notificationTemplates: [NotificationTemplate!]!
   
   # Para automação RECURRING
   frequency: AutomationFrequency
@@ -39,15 +48,23 @@ type Automation {
   updatedAt: Timestamp!
 }
 
+input NotificationTemplateInput {
+  title: String!
+  body: String!
+  data: JSON
+  imageUrl: String
+  clickAction: String
+  sound: String
+  badge: Int
+  delayMinutes: Int! # Delay em minutos após o push anterior (0 para o primeiro)
+}
+
 input CreateAutomationInput {
   appId: ID!
   name: String!
   description: String
   type: AutomationType!
-  notificationTemplate: JSON!
-  
-  # Para SUBSCRIPTION
-  delayMinutes: Int
+  notificationTemplates: [NotificationTemplateInput!]! # Array de templates (mínimo 1)
   
   # Para RECURRING
   frequency: AutomationFrequency
@@ -61,10 +78,7 @@ input UpdateAutomationInput {
   name: String
   description: String
   isActive: Boolean
-  notificationTemplate: JSON
-  
-  # Para SUBSCRIPTION
-  delayMinutes: Int
+  notificationTemplates: [NotificationTemplateInput!] # Array de templates
   
   # Para RECURRING
   frequency: AutomationFrequency

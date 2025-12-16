@@ -22,6 +22,20 @@
       "when": 1737056000000,
       "tag": "0002_add_automations",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1737056100000,
+      "tag": "0003_add_device_deliverylog",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1737056200000,
+      "tag": "0004_update_automation_multiple_templates",
+      "breakpoints": true
     }
   ]
 }
