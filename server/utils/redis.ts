@@ -80,20 +80,28 @@ export function getRedis(): Redis {
 
 export function getRedisConnection() {
   const redisUrl = process.env.REDIS_URL
-  const parsedFromUrl = parseRedisUrl(redisUrl)
 
-  if (redisUrl && parsedFromUrl) {
-    return {
-      host: parsedFromUrl.host,
-      port: parsedFromUrl.port,
-      password: parsedFromUrl.password,
-      maxRetriesPerRequest: null,
+  // BullMQ supports both URL string and connection object
+  // Prefer URL if available as it's more reliable
+  if (redisUrl) {
+    // Log connection info (without password) for debugging
+    try {
+      const parsed = new URL(redisUrl)
+      console.log(`[Redis] Using REDIS_URL: redis://${parsed.username || 'default'}@${parsed.hostname}:${parsed.port || '6379'}`)
     }
+    catch {
+      console.log('[Redis] Using REDIS_URL (format may be invalid)')
+    }
+    return redisUrl
   }
 
+  // Fallback to connection object
+  const host = process.env.REDIS_HOST || 'localhost'
+  const port = Number.parseInt(process.env.REDIS_PORT || '6379')
+  console.log(`[Redis] Using connection object: ${host}:${port}`)
   return {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: Number.parseInt(process.env.REDIS_PORT || '6379'),
+    host,
+    port,
     password: process.env.REDIS_PASSWORD || undefined,
     maxRetriesPerRequest: null,
   }

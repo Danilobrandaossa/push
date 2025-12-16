@@ -165,6 +165,7 @@ async function processScheduledNotification(job: Job<ProcessScheduledJobData>) {
 }
 
 let worker: Worker | null = null
+let lastConnectionErrorTime = 0
 
 export function startNotificationWorker() {
   if (worker) {
@@ -209,9 +210,18 @@ export function startNotificationWorker() {
     })
 
     worker.on('error', (err) => {
-      // Only log non-connection errors to avoid spam
-      if (!err.message.includes('ECONNREFUSED') && !err.message.includes('connect')) {
-        console.error('[NotificationWorker] Worker error:', err.message)
+      // Log connection errors with more context, but avoid spam
+      if (err.message.includes('ECONNREFUSED') || err.message.includes('connect')) {
+        // Only log once per minute to avoid spam
+        const now = Date.now()
+        if (now - lastConnectionErrorTime > 60000) {
+          console.error('[NotificationWorker] Redis connection error:', err.message)
+          console.error('[NotificationWorker] Check REDIS_URL or REDIS_HOST/REDIS_PORT configuration')
+          lastConnectionErrorTime = now
+        }
+      }
+      else {
+        console.error('[NotificationWorker] Worker error:', err.message, err.stack)
       }
     })
 
