@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { DevicePlatform } from '#graphql/client'
+import { useQueryCache } from '@pinia/colada'
+import { Alert, AlertDescription, AlertTitle } from 'abckit/shadcn/alert'
 import { Badge } from 'abckit/shadcn/badge'
 import { Button } from 'abckit/shadcn/button'
 import { Card, CardContent, CardHeader, CardTitle } from 'abckit/shadcn/card'
@@ -24,11 +26,15 @@ const { data: devicesData, isLoading: devicesLoading } = useDevices(appId)
 const devices = computed(() => devicesData.value || [])
 
 const { mutateAsync: registerDeviceMutation, isLoading: isRegisteringDevice } = useRegisterDevice()
+const { mutateAsync: deleteDeviceMutation, isLoading: isDeletingDevice } = useDeleteDevice()
+const queryCache = useQueryCache()
 
 // Reactive data
 const searchQuery = ref('')
 const selectedPlatform = ref('all')
 const showRegisterDevice = ref(false)
+const showDeleteDialog = ref(false)
+const deviceToDelete = ref<string | null>(null)
 const deviceForm = ref({
   token: '',
   platform: 'WEB',
@@ -412,13 +418,29 @@ async function registerDevice() {
 }
 
 function deleteDevice(deviceId: string) {
-  // TODO: Implement device deletion
-  console.log('Delete device:', deviceId)
+  deviceToDelete.value = deviceId
+  showDeleteDialog.value = true
+}
+
+async function confirmDeleteDevice() {
+  if (!deviceToDelete.value)
+    return
+
+  try {
+    await deleteDeviceMutation(deviceToDelete.value)
+    // Invalidate devices query to refresh the list
+    queryCache.invalidateQueries({ key: ['devices', appId.value] })
+    showDeleteDialog.value = false
+    deviceToDelete.value = null
+  }
+  catch (error) {
+    console.error('Error deleting device:', error)
+  }
 }
 
 function refreshDevices() {
-  // TODO: Refresh devices list
-  console.log('Refresh devices')
+  // Refresh devices list by invalidating the query
+  queryCache.invalidateQueries({ key: ['devices', appId.value] })
 }
 </script>
 
@@ -718,6 +740,35 @@ function refreshDevices() {
           <Button :disabled="isRegisteringDevice || !deviceForm.token" @click="registerDevice">
             <Icon v-if="isRegisteringDevice" name="lucide:loader-2" class="mr-2 size-4 animate-spin" />
             Register Device
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Delete Device Dialog -->
+    <Dialog v-model:open="showDeleteDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Device</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete this device? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-4">
+          <Alert variant="destructive">
+            <Icon name="lucide:alert-triangle" class="size-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              This device will no longer receive push notifications. All associated data will be permanently deleted.
+            </AlertDescription>
+          </Alert>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showDeleteDialog = false">Cancel</Button>
+          <Button variant="destructive" :disabled="isDeletingDevice" @click="confirmDeleteDevice">
+            <Icon v-if="isDeletingDevice" name="lucide:loader-2" class="mr-2 size-4 animate-spin" />
+            <Icon v-else name="lucide:trash-2" class="mr-2 size-4" />
+            Delete Device
           </Button>
         </DialogFooter>
       </DialogContent>

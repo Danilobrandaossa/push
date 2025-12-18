@@ -57,6 +57,268 @@ watch(app, (newApp) => {
 
 const { success: successToast, error: errorToast } = useToast()
 
+// WordPress plugin download
+const downloadWordPressPlugin = () => {
+  if (!app.value?.vapidPublicKey || !app.value?.apiKey || !app.value?.id) {
+    errorToast('Configuração incompleta', 'Configure as chaves VAPID, API Key e App ID primeiro')
+    return
+  }
+
+  // Create a data URL with plugin configuration
+  const pluginConfig = {
+    apiUrl: window.location.origin,
+    apiKey: app.value.apiKey,
+    appId: app.value.id,
+    vapidPublicKey: app.value.vapidPublicKey,
+  }
+
+  // Show instructions
+  const instructions = `
+# Configuração do Plugin WordPress NitroPing
+
+## Passos para instalação:
+
+1. Baixe o plugin da pasta \`wordpress-plugin\` do repositório
+2. Faça upload da pasta para \`/wp-content/plugins/\` do seu WordPress
+3. Renomeie a pasta para \`nitroping-push\`
+4. Ative o plugin no painel do WordPress
+
+## Configuração no WordPress:
+
+1. Vá em **Configurações > NitroPing Push**
+2. Preencha os seguintes campos:
+
+**API URL:** ${pluginConfig.apiUrl}
+**API Key:** ${pluginConfig.apiKey}
+**App ID:** ${pluginConfig.appId}
+**VAPID Public Key:** ${pluginConfig.vapidPublicKey}
+
+3. Marque "Enable Push Notifications"
+4. Salve as configurações
+
+## Pronto!
+
+O plugin irá automaticamente:
+- Registrar o Service Worker
+- Solicitar permissão de notificações aos visitantes
+- Registrar dispositivos no NitroPing
+- Permitir que você envie notificações push
+
+Para mais informações, consulte o README.md na pasta do plugin.
+  `.trim()
+
+  // Copy instructions to clipboard
+  navigator.clipboard.writeText(instructions).then(() => {
+    successToast('Instruções copiadas!', 'As instruções de instalação foram copiadas para a área de transferência')
+  }).catch(() => {
+    // Fallback: show in alert
+    alert(instructions)
+  })
+}
+
+// WordPress script generation (legacy - mantido para compatibilidade)
+const wordpressScript = computed(() => {
+  if (!app.value?.vapidPublicKey || !app.value?.apiKey) {
+    return ''
+  }
+
+  const apiUrl = window.location.origin
+  const publicKey = app.value.vapidPublicKey
+  const apiKey = app.value.apiKey
+
+  return `<?php
+/**
+ * NitroPing Web Push Notifications para WordPress
+ * 
+ * Instruções:
+ * 1. Adicione este código no functions.php do seu tema ou em um plugin personalizado
+ * 2. Certifique-se de que o service worker (sw.js) está na raiz do seu site
+ * 3. Ajuste a URL da API se necessário
+ */
+
+// Enfileirar scripts necessários
+function nitroping_enqueue_scripts() {
+    // Service Worker
+    wp_enqueue_script('nitroping-sw', get_template_directory_uri() . '/sw.js', [], '1.0.0', false);
+    
+    // Script principal de push
+    wp_enqueue_script('nitroping-push', get_template_directory_uri() . '/js/nitroping-push.js', [], '1.0.0', true);
+    
+    // Passar configurações para o JavaScript
+    wp_localize_script('nitroping-push', 'nitropingConfig', [
+        'apiUrl' => '${apiUrl}',
+        'apiKey' => '${apiKey}',
+        'vapidPublicKey' => '${publicKey}',
+        'appId' => '${app.value?.id}',
+    ]);
+}
+add_action('wp_enqueue_scripts', 'nitroping_enqueue_scripts');
+
+// Criar arquivo JavaScript (salve como /js/nitroping-push.js no tema)
+/*
+// nitroping-push.js
+(function() {
+    'use strict';
+    
+    const config = window.nitropingConfig;
+    
+    // Verificar suporte do navegador
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.log('Push notifications não são suportados neste navegador');
+        return;
+    }
+    
+    // Converter VAPID public key para Uint8Array
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/\\-/g, '+')
+            .replace(/_/g, '/');
+        
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+    
+    // Registrar Service Worker e solicitar permissão
+    async function registerPushNotifications() {
+        try {
+            // Registrar Service Worker
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            console.log('Service Worker registrado:', registration);
+            
+            // Solicitar permissão
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                console.log('Permissão de notificação negada');
+                return;
+            }
+            
+            // Converter chave pública
+            const applicationServerKey = urlBase64ToUint8Array(config.vapidPublicKey);
+            
+            // Inscrever para push
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: applicationServerKey
+            });
+            
+            // Converter subscription para formato base64
+            const key = subscription.getKey('p256dh');
+            const auth = subscription.getKey('auth');
+            
+            const subscriptionData = {
+                endpoint: subscription.endpoint,
+                keys: {
+                    p256dh: btoa(String.fromCharCode(...new Uint8Array(key))),
+                    auth: btoa(String.fromCharCode(...new Uint8Array(auth)))
+                }
+            };
+            
+            // Enviar subscription para o servidor
+            const response = await fetch(config.apiUrl + '/api/graphql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + config.apiKey
+                },
+                body: JSON.stringify({
+                    query: \`
+                        mutation RegisterDevice($input: RegisterDeviceInput!) {
+                            registerDevice(input: $input) {
+                                id
+                                platform
+                                createdAt
+                            }
+                        }
+                    \`,
+                    variables: {
+                        input: {
+                            appId: config.appId,
+                            platform: 'WEB',
+                            token: subscription.endpoint,
+                            webPushP256dh: subscriptionData.keys.p256dh,
+                            webPushAuth: subscriptionData.keys.auth
+                        }
+                    }
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.errors) {
+                console.error('Erro ao registrar dispositivo:', result.errors);
+            } else {
+                console.log('Dispositivo registrado com sucesso:', result.data);
+            }
+        } catch (error) {
+            console.error('Erro ao registrar push notifications:', error);
+        }
+    }
+    
+    // Inicializar quando a página carregar
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', registerPushNotifications);
+    } else {
+        registerPushNotifications();
+    }
+})();
+*/
+
+// Service Worker (salve como /sw.js na raiz do WordPress)
+/*
+// sw.js
+self.addEventListener('push', function(event) {
+    const data = event.data ? event.data.json() : {};
+    const title = data.title || 'Nova notificação';
+    const options = {
+        body: data.body || '',
+        icon: data.icon || '/wp-content/themes/seu-tema/images/icon.png',
+        badge: data.badge || '/wp-content/themes/seu-tema/images/badge.png',
+        image: data.image || null,
+        data: data.data || {},
+        requireInteraction: data.requireInteraction || false,
+        actions: data.actions || []
+    };
+    
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
+});
+
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    
+    if (event.notification.data && event.notification.data.url) {
+        event.waitUntil(
+            clients.openWindow(event.notification.data.url)
+        );
+    }
+});
+*/
+`
+})
+
+async function copyWordPressScript() {
+  if (!wordpressScript.value) {
+    errorToast('Configuração incompleta', 'Configure as chaves VAPID e API Key primeiro')
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(wordpressScript.value)
+    successToast('Script copiado!', 'O script WordPress foi copiado para a área de transferência')
+  }
+  catch (error) {
+    console.error('Erro ao copiar script:', error)
+    errorToast('Erro ao copiar', 'Não foi possível copiar o script. Tente selecionar e copiar manualmente.')
+  }
+}
+
 // Generate new VAPID keys
 async function generateKeys() {
   try {
@@ -85,7 +347,7 @@ async function generateKeys() {
 // Form submission
 const onSubmit = handleSubmit(async (values) => {
   try {
-    await configureWebPushMutation({
+    const result = await configureWebPushMutation({
       id: appId.value,
       input: {
         subject: values.subject.trim(),
@@ -94,14 +356,26 @@ const onSubmit = handleSubmit(async (values) => {
       },
     })
 
-    successToast('Web Push configured successfully', 'Your VAPID configuration has been saved.')
+    if (result) {
+      // Update form with saved values (including decrypted private key)
+      setValues({
+        subject: result.vapidSubject || values.subject,
+        publicKey: result.vapidPublicKey || values.publicKey,
+        privateKey: result.vapidPrivateKey || values.privateKey,
+      })
 
-    // Navigate back to providers page
-    await router.push(`/apps/${appId.value}/providers`)
+      successToast('Web Push configured successfully', 'Your VAPID configuration has been saved.')
+
+      // Wait a bit for cache to update, then navigate back
+      setTimeout(() => {
+        router.push(`/apps/${appId.value}/providers`)
+      }, 500)
+    }
   }
   catch (error) {
     console.error('Error configuring Web Push:', error)
-    errorToast('Failed to configure Web Push', 'Please check your settings and try again.')
+    const errorMessage = error instanceof Error ? error.message : 'Please check your settings and try again.'
+    errorToast('Failed to configure Web Push', errorMessage)
   }
 })
 
@@ -305,6 +579,69 @@ const hasExistingConfig = computed(() => {
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      <!-- WordPress Plugin -->
+      <Card v-if="hasExistingConfig">
+        <CardHeader>
+          <div class="flex items-center justify-between">
+            <div>
+              <CardTitle>Plugin WordPress</CardTitle>
+              <CardDescription>Plugin completo para integrar push notifications no seu site WordPress</CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="default"
+              :disabled="!app?.vapidPublicKey || !app?.apiKey || !app?.id"
+              @click="downloadWordPressPlugin"
+            >
+              <Icon name="lucide:download" class="mr-2 size-4" />
+              Copiar Instruções
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div class="space-y-4">
+            <Alert>
+              <Icon name="lucide:info" class="size-4" />
+              <AlertTitle>Plugin WordPress Completo</AlertTitle>
+              <AlertDescription>
+                Um plugin WordPress completo está disponível na pasta <code class="bg-muted px-1 py-0.5 rounded text-xs">wordpress-plugin</code> do repositório.
+                O plugin inclui:
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                  <li>Interface administrativa para configuração</li>
+                  <li>Registro automático de dispositivos</li>
+                  <li>Service Worker para notificações em background</li>
+                  <li>Suporte a ações e imagens em notificações</li>
+                  <li>Instalação e desinstalação limpa</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+            
+            <div class="space-y-2">
+              <h4 class="font-medium">Localização do Plugin:</h4>
+              <code class="block bg-muted p-2 rounded text-xs">wordpress-plugin/</code>
+            </div>
+
+            <div class="space-y-2">
+              <h4 class="font-medium">Instalação Rápida:</h4>
+              <ol class="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                <li>Copie a pasta <code class="bg-muted px-1 py-0.5 rounded">wordpress-plugin</code> para <code class="bg-muted px-1 py-0.5 rounded">/wp-content/plugins/</code></li>
+                <li>Renomeie para <code class="bg-muted px-1 py-0.5 rounded">nitroping-push</code></li>
+                <li>Ative o plugin no WordPress</li>
+                <li>Configure em <strong>Configurações > NitroPing Push</strong></li>
+              </ol>
+            </div>
+
+            <Alert>
+              <Icon name="lucide:file-text" class="size-4" />
+              <AlertTitle>Documentação Completa</AlertTitle>
+              <AlertDescription>
+                Consulte o arquivo <code class="bg-muted px-1 py-0.5 rounded">README.md</code> na pasta do plugin para instruções detalhadas, solução de problemas e personalização.
+              </AlertDescription>
+            </Alert>
+          </div>
         </CardContent>
       </Card>
 

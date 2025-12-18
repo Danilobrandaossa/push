@@ -174,42 +174,42 @@ export function startNotificationWorker() {
   }
 
   try {
-    worker = new Worker(
-      'notifications',
-      async (job) => {
-        console.log(`[NotificationWorker] Processing job ${job.id} (${job.name})`)
+  worker = new Worker(
+    'notifications',
+    async (job) => {
+      console.log(`[NotificationWorker] Processing job ${job.id} (${job.name})`)
 
-        switch (job.name) {
-          case 'send-notification':
-            return processSendNotification(job as Job<SendNotificationJobData>)
-          case 'retry-notification':
-            return processRetryNotification(job as Job<RetryNotificationJobData>)
-          case 'process-scheduled':
-            return processScheduledNotification(job as Job<ProcessScheduledJobData>)
-          default:
-            console.warn(`[NotificationWorker] Unknown job name: ${job.name}`)
-            return { success: false, reason: 'unknown_job' }
-        }
+      switch (job.name) {
+        case 'send-notification':
+          return processSendNotification(job as Job<SendNotificationJobData>)
+        case 'retry-notification':
+          return processRetryNotification(job as Job<RetryNotificationJobData>)
+        case 'process-scheduled':
+          return processScheduledNotification(job as Job<ProcessScheduledJobData>)
+        default:
+          console.warn(`[NotificationWorker] Unknown job name: ${job.name}`)
+          return { success: false, reason: 'unknown_job' }
+      }
+    },
+    {
+      connection: getRedisConnection(),
+      concurrency: 10,
+      limiter: {
+        max: 100,
+        duration: 1000, // Max 100 jobs per second
       },
-      {
-        connection: getRedisConnection(),
-        concurrency: 10,
-        limiter: {
-          max: 100,
-          duration: 1000, // Max 100 jobs per second
-        },
-      },
-    )
+    },
+  )
 
-    worker.on('completed', (job) => {
-      console.log(`[NotificationWorker] Job ${job.id} completed`)
-    })
+  worker.on('completed', (job) => {
+    console.log(`[NotificationWorker] Job ${job.id} completed`)
+  })
 
-    worker.on('failed', (job, err) => {
-      console.error(`[NotificationWorker] Job ${job?.id} failed:`, err.message)
-    })
+  worker.on('failed', (job, err) => {
+    console.error(`[NotificationWorker] Job ${job?.id} failed:`, err.message)
+  })
 
-    worker.on('error', (err) => {
+  worker.on('error', (err) => {
       // Log connection errors with more context, but avoid spam
       if (err.message.includes('ECONNREFUSED') || err.message.includes('connect')) {
         // Only log once per minute to avoid spam
@@ -223,10 +223,10 @@ export function startNotificationWorker() {
       else {
         console.error('[NotificationWorker] Worker error:', err.message, err.stack)
       }
-    })
+  })
 
-    console.log('[NotificationWorker] Started')
-    return worker
+  console.log('[NotificationWorker] Started')
+  return worker
   }
   catch (error: any) {
     // If Redis is not available, log warning but don't crash

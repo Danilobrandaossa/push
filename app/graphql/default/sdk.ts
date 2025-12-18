@@ -216,6 +216,139 @@ export const GenerateVapidKeysDocument = /*#__PURE__*/ `
   }
 }
     `;
+export const CreateAutomationDocument = /*#__PURE__*/ `
+    mutation createAutomation($input: CreateAutomationInput!) {
+  createAutomation(input: $input) {
+    id
+    appId
+    name
+    description
+    type
+    isActive
+    notificationTemplates {
+      title
+      body
+      data
+      imageUrl
+      clickAction
+      sound
+      badge
+      delayMinutes
+    }
+    frequency
+    timeOfDay
+    daysOfWeek
+    startDate
+    endDate
+    nextRunAt
+    createdAt
+    updatedAt
+  }
+}
+    `;
+export const UpdateAutomationDocument = /*#__PURE__*/ `
+    mutation updateAutomation($id: ID!, $input: UpdateAutomationInput!) {
+  updateAutomation(id: $id, input: $input) {
+    id
+    appId
+    name
+    description
+    type
+    isActive
+    notificationTemplates {
+      title
+      body
+      data
+      imageUrl
+      clickAction
+      sound
+      badge
+      delayMinutes
+    }
+    frequency
+    timeOfDay
+    daysOfWeek
+    startDate
+    endDate
+    nextRunAt
+    createdAt
+    updatedAt
+  }
+}
+    `;
+export const DeleteAutomationDocument = /*#__PURE__*/ `
+    mutation deleteAutomation($id: ID!) {
+  deleteAutomation(id: $id)
+}
+    `;
+export const ToggleAutomationDocument = /*#__PURE__*/ `
+    mutation toggleAutomation($id: ID!) {
+  toggleAutomation(id: $id) {
+    id
+    isActive
+  }
+}
+    `;
+export const AutomationsDocument = /*#__PURE__*/ `
+    query automations($appId: ID) {
+  automations(appId: $appId) {
+    id
+    appId
+    name
+    description
+    type
+    isActive
+    notificationTemplates {
+      title
+      body
+      data
+      imageUrl
+      clickAction
+      sound
+      badge
+      delayMinutes
+    }
+    frequency
+    timeOfDay
+    daysOfWeek
+    startDate
+    endDate
+    nextRunAt
+    createdAt
+    updatedAt
+  }
+}
+    `;
+export const AutomationDocument = /*#__PURE__*/ `
+    query automation($id: ID!) {
+  automation(id: $id) {
+    id
+    appId
+    name
+    description
+    type
+    isActive
+    notificationTemplates {
+      title
+      body
+      data
+      imageUrl
+      clickAction
+      sound
+      badge
+      delayMinutes
+    }
+    frequency
+    timeOfDay
+    daysOfWeek
+    startDate
+    endDate
+    nextRunAt
+    createdAt
+    updatedAt
+  }
+}
+    `;
 export const RegisterDeviceDocument = /*#__PURE__*/ `
     mutation registerDevice($input: RegisterDeviceInput!) {
   registerDevice(input: $input) {
@@ -306,6 +439,33 @@ export const DeviceByTokenDocument = /*#__PURE__*/ `
 export const SendNotificationDocument = /*#__PURE__*/ `
     mutation sendNotification($input: SendNotificationInput!) {
   sendNotification(input: $input) {
+    id
+    appId
+    title
+    body
+    data
+    badge
+    sound
+    clickAction
+    imageUrl
+    targetDevices
+    platforms
+    scheduledAt
+    status
+    totalTargets
+    totalSent
+    totalDelivered
+    totalFailed
+    totalClicked
+    createdAt
+    updatedAt
+    sentAt
+  }
+}
+    `;
+export const ScheduleNotificationDocument = /*#__PURE__*/ `
+    mutation scheduleNotification($input: SendNotificationInput!) {
+  scheduleNotification(input: $input) {
     id
     appId
     title
@@ -461,6 +621,24 @@ export function getSdk<C, E>(requester: Requester<C, E>) {
     generateVapidKeys(variables?: Types.GenerateVapidKeysQueryVariables, options?: C): Promise<ExecutionResult<Types.GenerateVapidKeysQuery, E>> {
       return requester<Types.GenerateVapidKeysQuery, Types.GenerateVapidKeysQueryVariables>(GenerateVapidKeysDocument, variables, options) as Promise<ExecutionResult<Types.GenerateVapidKeysQuery, E>>;
     },
+    createAutomation(variables: Types.CreateAutomationMutationVariables, options?: C): Promise<ExecutionResult<Types.CreateAutomationMutation, E>> {
+      return requester<Types.CreateAutomationMutation, Types.CreateAutomationMutationVariables>(CreateAutomationDocument, variables, options) as Promise<ExecutionResult<Types.CreateAutomationMutation, E>>;
+    },
+    updateAutomation(variables: Types.UpdateAutomationMutationVariables, options?: C): Promise<ExecutionResult<Types.UpdateAutomationMutation, E>> {
+      return requester<Types.UpdateAutomationMutation, Types.UpdateAutomationMutationVariables>(UpdateAutomationDocument, variables, options) as Promise<ExecutionResult<Types.UpdateAutomationMutation, E>>;
+    },
+    deleteAutomation(variables: Types.DeleteAutomationMutationVariables, options?: C): Promise<ExecutionResult<Types.DeleteAutomationMutation, E>> {
+      return requester<Types.DeleteAutomationMutation, Types.DeleteAutomationMutationVariables>(DeleteAutomationDocument, variables, options) as Promise<ExecutionResult<Types.DeleteAutomationMutation, E>>;
+    },
+    toggleAutomation(variables: Types.ToggleAutomationMutationVariables, options?: C): Promise<ExecutionResult<Types.ToggleAutomationMutation, E>> {
+      return requester<Types.ToggleAutomationMutation, Types.ToggleAutomationMutationVariables>(ToggleAutomationDocument, variables, options) as Promise<ExecutionResult<Types.ToggleAutomationMutation, E>>;
+    },
+    automations(variables?: Types.AutomationsQueryVariables, options?: C): Promise<ExecutionResult<Types.AutomationsQuery, E>> {
+      return requester<Types.AutomationsQuery, Types.AutomationsQueryVariables>(AutomationsDocument, variables, options) as Promise<ExecutionResult<Types.AutomationsQuery, E>>;
+    },
+    automation(variables: Types.AutomationQueryVariables, options?: C): Promise<ExecutionResult<Types.AutomationQuery, E>> {
+      return requester<Types.AutomationQuery, Types.AutomationQueryVariables>(AutomationDocument, variables, options) as Promise<ExecutionResult<Types.AutomationQuery, E>>;
+    },
     registerDevice(variables: Types.RegisterDeviceMutationVariables, options?: C): Promise<ExecutionResult<Types.RegisterDeviceMutation, E>> {
       return requester<Types.RegisterDeviceMutation, Types.RegisterDeviceMutationVariables>(RegisterDeviceDocument, variables, options) as Promise<ExecutionResult<Types.RegisterDeviceMutation, E>>;
     },
@@ -481,6 +659,9 @@ export function getSdk<C, E>(requester: Requester<C, E>) {
     },
     sendNotification(variables: Types.SendNotificationMutationVariables, options?: C): Promise<ExecutionResult<Types.SendNotificationMutation, E>> {
       return requester<Types.SendNotificationMutation, Types.SendNotificationMutationVariables>(SendNotificationDocument, variables, options) as Promise<ExecutionResult<Types.SendNotificationMutation, E>>;
+    },
+    scheduleNotification(variables: Types.ScheduleNotificationMutationVariables, options?: C): Promise<ExecutionResult<Types.ScheduleNotificationMutation, E>> {
+      return requester<Types.ScheduleNotificationMutation, Types.ScheduleNotificationMutationVariables>(ScheduleNotificationDocument, variables, options) as Promise<ExecutionResult<Types.ScheduleNotificationMutation, E>>;
     },
     notifications(variables?: Types.NotificationsQueryVariables, options?: C): Promise<ExecutionResult<Types.NotificationsQuery, E>> {
       return requester<Types.NotificationsQuery, Types.NotificationsQueryVariables>(NotificationsDocument, variables, options) as Promise<ExecutionResult<Types.NotificationsQuery, E>>;

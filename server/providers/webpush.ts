@@ -72,19 +72,35 @@ class WebPushProvider {
         sub: this.config.vapidSubject,
       }
 
+      // Normalize private key (remove all whitespace)
+      const cleanPrivateKey = this.config.privateKey.replace(/\s+/g, '')
+
+      console.log('[WebPush] Processing VAPID private key:', {
+        originalLength: this.config.privateKey.length,
+        cleanLength: cleanPrivateKey.length,
+        wasNormalized: cleanPrivateKey !== this.config.privateKey,
+        startsWithMIG: cleanPrivateKey.startsWith('MIG'),
+        hasBase64Chars: cleanPrivateKey.includes('+') || cleanPrivateKey.includes('/'),
+        hasBase64UrlChars: cleanPrivateKey.includes('-') || cleanPrivateKey.includes('_'),
+        preview: cleanPrivateKey.substring(0, 30) + '...'
+      })
+
       // Detect format: base64 starts with "MIG" (PKCS#8 header), base64url uses - and _
       let privateKeyBuffer: Buffer
-      if (this.config.privateKey.startsWith('MIG') || this.config.privateKey.includes('+') || this.config.privateKey.includes('/')) {
+      if (cleanPrivateKey.startsWith('MIG') || cleanPrivateKey.includes('+') || cleanPrivateKey.includes('/')) {
         // Standard base64 (PKCS#8 DER)
-        privateKeyBuffer = Buffer.from(this.config.privateKey, 'base64')
+        console.log('[WebPush] Using base64 format for private key')
+        privateKeyBuffer = Buffer.from(cleanPrivateKey, 'base64')
       }
-      else if (this.config.privateKey.includes('-') || this.config.privateKey.includes('_')) {
+      else if (cleanPrivateKey.includes('-') || cleanPrivateKey.includes('_')) {
         // base64url
-        privateKeyBuffer = Buffer.from(this.config.privateKey, 'base64url')
+        console.log('[WebPush] Using base64url format for private key')
+        privateKeyBuffer = Buffer.from(cleanPrivateKey, 'base64url')
       }
       else {
         // Try base64 first (more common for PKCS#8)
-        privateKeyBuffer = Buffer.from(this.config.privateKey, 'base64')
+        console.log('[WebPush] Defaulting to base64 format for private key')
+        privateKeyBuffer = Buffer.from(cleanPrivateKey, 'base64')
       }
 
       // Import the key properly using Node.js crypto
@@ -97,14 +113,54 @@ class WebPushProvider {
       // Export as PEM for jsonwebtoken
       const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }) as string
 
+      console.log('[WebPush] Private key converted to PEM:', {
+        pemLength: privateKeyPem.length,
+        pemPreview: privateKeyPem.substring(0, 50) + '...',
+        subject: this.config.vapidSubject,
+        audience
+      })
+
       const token = jwt.sign(payload, privateKeyPem, {
         algorithm: 'ES256',
       })
 
-      return {
-        'Authorization': `vapid t=${token}, k=${this.config.publicKey}`,
-        'Crypto-Key': `p256ecdsa=${this.config.publicKey}`,
+      // Ensure public key has no whitespace
+      const cleanPublicKey = this.config.publicKey.replace(/\s+/g, '')
+
+      const headers = {
+        'Authorization': `vapid t=${token}, k=${cleanPublicKey}`,
+        'Crypto-Key': `p256ecdsa=${cleanPublicKey}`,
       }
+
+      // Log full key for debugging and validation
+      const expectedKey = 'BIJfFcoBwqS1RLu7tjMcdwIQK86T4KdRHhc6mcxFmy0yXp0DeNY8lRl0LSFp4XThozLwobq09dzEOOcSPwstI7k'
+      const keysMatch = cleanPublicKey === expectedKey
+
+      console.log('[WebPush] VAPID headers generated with full key:', {
+        publicKeyFull: cleanPublicKey, // Log full key for comparison
+        publicKeyPreview: cleanPublicKey.substring(0, 50) + '...',
+        publicKeyLength: cleanPublicKey.length,
+        expectedKeyLength: expectedKey.length,
+        keysMatch: keysMatch,
+        keyDifference: keysMatch ? 'NONE' : `First diff at position ${cleanPublicKey.split('').findIndex((c, i) => c !== expectedKey[i])}`,
+        wasPublicKeyNormalized: cleanPublicKey !== this.config.publicKey,
+        publicKeyInAuth: headers.Authorization.includes(cleanPublicKey.substring(0, 20)),
+        publicKeyInCryptoKey: headers['Crypto-Key'].includes(cleanPublicKey.substring(0, 20)),
+        publicKeyFirstChar: cleanPublicKey.charAt(0),
+        publicKeyLastChar: cleanPublicKey.charAt(cleanPublicKey.length - 1),
+        tokenPreview: token.substring(0, 30) + '...',
+        tokenLength: token.length,
+        subject: this.config.vapidSubject,
+        audience
+      })
+
+      if (!keysMatch) {
+        console.warn('[WebPush] WARNING: VAPID public key does not match expected key!')
+        console.warn('[WebPush] Expected:', expectedKey)
+        console.warn('[WebPush] Actual:', cleanPublicKey)
+      }
+
+      return headers
     }
     catch (error) {
       throw new Error(`Failed to generate VAPID headers: ${error}`)
@@ -240,11 +296,27 @@ class WebPushProvider {
 
   async sendMessage(message: WebPushMessage): Promise<WebPushResponse> {
     try {
+      console.log('[WebPush] Sending message to endpoint:', message.subscription.endpoint.substring(0, 50) + '...')
+      console.log('[WebPush] Using VAPID config:', {
+        subject: this.config.vapidSubject,
+        publicKeyPreview: this.config.publicKey.substring(0, 20) + '...',
+        hasPrivateKey: !!this.config.privateKey
+      })
+
       const audience = this.getAudience(message.subscription.endpoint)
+      console.log('[WebPush] Audience:', audience)
+
       const vapidHeaders = await this.generateVapidHeaders(audience)
+      console.log('[WebPush] VAPID headers generated', {
+        authorizationPreview: vapidHeaders.Authorization?.substring(0, 30) + '...',
+        cryptoKeyPreview: vapidHeaders['Crypto-Key']?.substring(0, 30) + '...'
+      })
 
       const payload = JSON.stringify(message.payload)
+      console.log('[WebPush] Payload:', payload)
+
       const { ciphertext, salt: _salt, localPublicKey: _localPublicKey } = await this.encryptPayload(payload, message.subscription)
+      console.log('[WebPush] Payload encrypted, size:', ciphertext.length)
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/octet-stream',
@@ -261,13 +333,18 @@ class WebPushProvider {
         headers.Urgency = message.options.urgency
       }
 
+      console.log('[WebPush] Sending request with headers:', Object.keys(headers))
+
       const response = await fetch(message.subscription.endpoint, {
         method: 'POST',
         headers,
         body: new Uint8Array(ciphertext),
       })
 
+      console.log('[WebPush] Response status:', response.status)
+
       if (response.status === 200 || response.status === 201 || response.status === 204) {
+        console.log('[WebPush] Success! Message sent')
         return {
           success: true,
           messageId: crypto.randomUUID(),
@@ -275,6 +352,7 @@ class WebPushProvider {
       }
       else {
         const responseText = await response.text()
+        console.error('[WebPush] Failed with status:', response.status, 'Response:', responseText)
         return {
           success: false,
           error: responseText || `HTTP ${response.status}`,
@@ -283,6 +361,7 @@ class WebPushProvider {
       }
     }
     catch (error) {
+      console.error('[WebPush] Error sending message:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

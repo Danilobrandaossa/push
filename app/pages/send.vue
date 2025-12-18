@@ -159,7 +159,7 @@ async function sendNotification() {
       await scheduleNotificationMutation(payload)
     }
     else {
-      await sendNotificationMutation(payload)
+    await sendNotificationMutation(payload)
     }
 
     console.log('Notification sent successfully!')
@@ -385,28 +385,28 @@ function resetForm() {
               <div class="space-y-4">
                 <Label>Schedule</Label>
                 <div class="space-y-2">
-                  <div class="flex items-center space-x-2">
-                    <Checkbox
-                      id="send-now"
+                <div class="flex items-center space-x-2">
+                  <Checkbox
+                    id="send-now"
                       :model-value="scheduleType === 'now' && !multipleScheduleEnabled"
                       @update:model-value="scheduleType = 'now'; multipleScheduleEnabled = false"
-                    />
-                    <Label for="send-now">Send now</Label>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <Checkbox
-                      id="schedule-later"
+                  />
+                  <Label for="send-now">Send now</Label>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <Checkbox
+                    id="schedule-later"
                       :model-value="scheduleType === 'later' && !multipleScheduleEnabled"
                       @update:model-value="scheduleType = 'later'; multipleScheduleEnabled = false"
-                    />
+                  />
                     <Label for="schedule-later">Schedule for later (single)</Label>
-                  </div>
+                </div>
                   <div v-if="scheduleType === 'later' && !multipleScheduleEnabled" class="ml-6">
-                    <Input
-                      v-model="scheduledAt"
-                      type="datetime-local"
-                      :min="new Date().toISOString().slice(0, 16)"
-                    />
+                  <Input
+                    v-model="scheduledAt"
+                    type="datetime-local"
+                    :min="new Date().toISOString().slice(0, 16)"
+                  />
                   </div>
                   <div class="flex items-center space-x-2">
                     <Checkbox

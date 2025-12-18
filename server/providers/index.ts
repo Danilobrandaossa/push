@@ -87,10 +87,45 @@ export async function getProviderForApp(appId: string, platform: 'ios' | 'androi
         ? decryptSensitiveData(appData.vapidPrivateKey)
         : appData.vapidPrivateKey
 
+      // Normalize VAPID keys (remove any whitespace)
+      const normalizedPublicKey = appData.vapidPublicKey.replace(/\s+/g, '')
+      const normalizedPrivateKey = vapidPrivateKey.replace(/\s+/g, '')
+
+      // Expected key for validation
+      const expectedKey = 'BIJfFcoBwqS1RLu7tjMcdwIQK86T4KdRHhc6mcxFmy0yXp0DeNY8lRl0LSFp4XThozLwobq09dzEOOcSPwstI7k'
+      const keysMatch = normalizedPublicKey === expectedKey
+
+      // Log full public key for debugging
+      console.log('[Provider] Creating WebPush provider with VAPID keys:', {
+        appId,
+        subject: appData.vapidSubject,
+        publicKeyFull: normalizedPublicKey, // Log full key for comparison
+        publicKeyPreview: normalizedPublicKey.substring(0, 50) + '...',
+        publicKeyLength: normalizedPublicKey.length,
+        expectedKeyLength: expectedKey.length,
+        keysMatch: keysMatch,
+        keyDifference: keysMatch ? 'NONE' : `First diff at position ${normalizedPublicKey.split('').findIndex((c, i) => c !== expectedKey[i])}`,
+        publicKeyOriginalLength: appData.vapidPublicKey.length,
+        wasPublicKeyNormalized: normalizedPublicKey !== appData.vapidPublicKey,
+        publicKeyFirstChar: normalizedPublicKey.charAt(0),
+        publicKeyLastChar: normalizedPublicKey.charAt(normalizedPublicKey.length - 1),
+        privateKeyPreview: normalizedPrivateKey.substring(0, 30) + '...',
+        privateKeyLength: normalizedPrivateKey.length,
+        privateKeyOriginalLength: vapidPrivateKey.length,
+        wasPrivateKeyNormalized: normalizedPrivateKey !== vapidPrivateKey,
+        hasPrivateKey: !!normalizedPrivateKey
+      })
+      
+      if (!keysMatch) {
+        console.warn('[Provider] WARNING: VAPID public key does not match expected key!')
+        console.warn('[Provider] Expected:', expectedKey)
+        console.warn('[Provider] Actual:', normalizedPublicKey)
+      }
+
       return new WebPushProvider({
         vapidSubject: appData.vapidSubject,
-        publicKey: appData.vapidPublicKey,
-        privateKey: vapidPrivateKey,
+        publicKey: normalizedPublicKey,
+        privateKey: normalizedPrivateKey,
       })
     }
 

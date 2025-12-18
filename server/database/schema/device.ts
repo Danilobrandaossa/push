@@ -18,6 +18,8 @@ export const device = pgTable('device', {
   // WebPush subscription keys (required for Web Push encryption)
   webPushP256dh: text(),
   webPushAuth: text(),
+  // VAPID public key used when device was registered (for debugging VAPID mismatch issues)
+  vapidPublicKeyUsed: text(),
   lastSeenAt: customTimestamp(),
   createdAt: customTimestamp().defaultNow().notNull(),
   updatedAt: customTimestamp().defaultNow().notNull(),

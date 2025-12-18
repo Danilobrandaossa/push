@@ -33,6 +33,7 @@ const appForm = ref({
 const showDeleteDialog = ref(false)
 const showRegenerateDialog = ref(false)
 const deleteConfirmText = ref('')
+const isAppIdCopied = ref(false)
 
 // Watch for app data changes
 watch(app, (newApp) => {
@@ -106,6 +107,19 @@ const isFormDirty = computed(() => {
 const canDelete = computed(() => {
   return deleteConfirmText.value === app.value?.slug
 })
+
+async function copyAppId() {
+  try {
+    await navigator.clipboard.writeText(app.value?.id || '')
+    isAppIdCopied.value = true
+    setTimeout(() => {
+      isAppIdCopied.value = false
+    }, 2000)
+  }
+  catch (error) {
+    console.error('Failed to copy App ID:', error)
+  }
+}
 </script>
 
 <template>
@@ -150,6 +164,28 @@ const canDelete = computed(() => {
               />
               <p class="text-xs text-muted-foreground">Slug cannot be changed after creation</p>
             </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label for="app-id">App ID</Label>
+            <div class="flex items-center gap-2">
+              <Input
+                id="app-id"
+                :model-value="app.id"
+                readonly
+                class="bg-muted font-mono text-sm"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                :disabled="isAppIdCopied"
+                @click="copyAppId"
+              >
+                <Icon v-if="isAppIdCopied" name="lucide:check" class="size-4 text-green-600" />
+                <Icon v-else name="lucide:copy" class="size-4" />
+              </Button>
+            </div>
+            <p class="text-xs text-muted-foreground">Use this ID to configure the WordPress plugin</p>
           </div>
 
           <div class="space-y-2">

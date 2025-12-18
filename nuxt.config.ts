@@ -1,4 +1,6 @@
 import type { NitroGraphQLOptions } from 'nitro-graphql'
+import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -16,6 +18,14 @@ export default defineNuxtConfig({
   abckit: {
     modules: {
       graphql: true,
+    },
+  },
+
+  vite: {
+    resolve: {
+      alias: {
+        'nitroping': resolve(fileURLToPath(import.meta.url), '../sdk/dist/index.js'),
+      },
     },
   },
 

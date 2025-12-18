@@ -17,7 +17,7 @@ export default defineNitroPlugin((nitroApp) => {
   try {
     const worker = startNotificationWorker()
     if (worker) {
-      console.log('[WorkerPlugin] Notification worker started')
+    console.log('[WorkerPlugin] Notification worker started')
     }
     else {
       console.warn('[WorkerPlugin] Notification worker not started (Redis unavailable). Set REDIS_ENABLED=false to suppress this warning.')

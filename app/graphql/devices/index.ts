@@ -86,6 +86,7 @@ export function useDeleteDevice() {
       return result.data?.deleteDevice || false
     },
     onSuccess: () => {
+      // Invalidate all device queries to refresh the list
       queryCache.invalidateQueries({ key: ['devices'] })
     },
   })

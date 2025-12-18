@@ -6,8 +6,16 @@ mutation createAutomation($input: CreateAutomationInput!) {
     description
     type
     isActive
-    notificationTemplate
-    delayMinutes
+    notificationTemplates {
+      title
+      body
+      data
+      imageUrl
+      clickAction
+      sound
+      badge
+      delayMinutes
+    }
     frequency
     timeOfDay
     daysOfWeek
@@ -27,8 +35,16 @@ mutation updateAutomation($id: ID!, $input: UpdateAutomationInput!) {
     description
     type
     isActive
-    notificationTemplate
-    delayMinutes
+    notificationTemplates {
+      title
+      body
+      data
+      imageUrl
+      clickAction
+      sound
+      badge
+      delayMinutes
+    }
     frequency
     timeOfDay
     daysOfWeek

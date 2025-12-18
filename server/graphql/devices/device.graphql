@@ -31,6 +31,10 @@ type Device {
   # WebPush subscription keys (only for WEB platform)
   webPushP256dh: String
   webPushAuth: String
+  # VAPID public key used when device was registered (for debugging VAPID mismatch issues)
+  vapidPublicKeyUsed: String
+  # Current VAPID public key from app (for debugging VAPID mismatch issues)
+  currentVapidPublicKey: String
 
   # Relations
   deliveryLogs: [DeliveryLog!]

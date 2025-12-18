@@ -3,7 +3,7 @@ import { createDataLoaders } from '~~/server/graphql/loaders'
 import { useDatabase } from '~~/server/utils/useDatabase'
 
 export default defineGraphQLConfig({
-  context: () => {
+  context: (event) => {
     const db = useDatabase()
     const dataloaders = createDataLoaders(db)
 
@@ -12,6 +12,7 @@ export default defineGraphQLConfig({
         useDatabase,
         tables,
         dataloaders,
+        event, // Include event for accessing request info (IP, headers, etc.)
       },
     }
   },

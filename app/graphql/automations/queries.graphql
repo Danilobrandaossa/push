@@ -6,8 +6,16 @@ query automations($appId: ID) {
     description
     type
     isActive
-    notificationTemplate
-    delayMinutes
+    notificationTemplates {
+      title
+      body
+      data
+      imageUrl
+      clickAction
+      sound
+      badge
+      delayMinutes
+    }
     frequency
     timeOfDay
     daysOfWeek
@@ -27,8 +35,16 @@ query automation($id: ID!) {
     description
     type
     isActive
-    notificationTemplate
-    delayMinutes
+    notificationTemplates {
+      title
+      body
+      data
+      imageUrl
+      clickAction
+      sound
+      badge
+      delayMinutes
+    }
     frequency
     timeOfDay
     daysOfWeek
