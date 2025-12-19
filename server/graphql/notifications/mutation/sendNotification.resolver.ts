@@ -265,47 +265,41 @@ export const notificationMutations = defineMutation({
                     statusCode: result.statusCode
                   })
 
-                  // If subscription expired (410), log warning but don't mark as EXPIRED for testing
-                  // TEMPORARILY DISABLED: Don't mark as EXPIRED for testing
+                  // 🔴 CRITICAL: 410 Gone = MORTE DEFINITIVA
+                  // Subscription expirou ou foi cancelada - endpoint não existe mais no FCM
+                  // NUNCA retentar - deletar device imediatamente
                   if (result.statusCode === 410) {
-                    console.warn(`[Notification] ⚠️ Device ${device.id} subscription expired (410) - NOT marking as EXPIRED for testing`)
-                    console.warn(`[Notification] ⚠️ Subscription endpoint: ${device.token.substring(0, 50)}...`)
-                    console.warn(`[Notification] ⚠️ Device will continue to be included in sends for testing`)
+                    console.error(`[Notification] 🔴 CRITICAL: Device ${device.id} subscription expired (410 Gone) - DELETING DEVICE IMMEDIATELY`)
+                    console.error(`[Notification] 🔴 Subscription endpoint: ${device.token.substring(0, 50)}...`)
+                    console.error(`[Notification] 🔴 410 = morte definitiva - subscription não existe mais no FCM`)
+                    console.error(`[Notification] 🔴 Device será deletado - NUNCA retentar envio para este device`)
 
-                    // TEMPORARILY DISABLED: Check for newer device and mark as EXPIRED
-                    // Check if there's a newer ACTIVE device for the same user/app
-                    // const newerDevice = await db
-                    //   .select()
-                    //   .from(tables.device)
-                    //   .where(
-                    //     and(
-                    //       eq(tables.device.appId, device.appId),
-                    //       eq(tables.device.userId, device.userId || ''),
-                    //       eq(tables.device.status, 'ACTIVE'),
-                    //       ne(tables.device.token, device.token)
-                    //     )
-                    //   )
-                    //   .orderBy(desc(tables.device.createdAt))
-                    //   .limit(1)
-                    // 
-                    // if (newerDevice.length > 0) {
-                    //   console.log(`[Notification] Found newer ACTIVE device for same user, marking old device as EXPIRED`)
-                    //   console.log(`[Notification] Old device: ${device.id}, New device: ${newerDevice[0].id}`)
-                    // }
-                    // 
-                    // // Mark as EXPIRED only if no newer device exists
-                    // try {
-                    //   await db
-                    //     .update(tables.device)
-                    //     .set({
-                    //       status: 'EXPIRED',
-                    //       updatedAt: new Date().toISOString(),
-                    //     })
-                    //     .where(eq(tables.device.id, device.id))
-                    //   console.log(`[Notification] Device ${device.id} marked as EXPIRED`)
-                    // } catch (updateError) {
-                    //   console.error(`[Notification] Failed to mark device ${device.id} as expired:`, updateError)
-                    // }
+                    // Criar delivery log antes de deletar (para histórico)
+                    deliveryLogs.push({
+                      notificationId: newNotification[0].id,
+                      deviceId: device.id,
+                      status: 'FAILED' as const,
+                      errorMessage: '410 Gone: Subscription expired or unsubscribed. Device deleted permanently. Never retry.',
+                      sentAt: null,
+                    })
+
+                    try {
+                      // Deletar device imediatamente - 410 é morte definitiva
+                      await db
+                        .delete(tables.device)
+                        .where(eq(tables.device.id, device.id))
+
+                      console.log(`[Notification] ✅ Device ${device.id} deletado permanentemente devido a 410 Gone`)
+                      console.log(`[Notification] ✅ Este device nunca mais será incluído em envios futuros`)
+
+                      // Pular para próximo device (continue)
+                      continue
+                    } catch (deleteError) {
+                      console.error(`[Notification] ❌ ERRO ao deletar device ${device.id}:`, deleteError)
+                      // Mesmo com erro, o delivery log já foi criado acima
+                      // Pular para próximo device
+                      continue
+                    }
                   }
                   // If VAPID credentials mismatch (403), log detailed warning but continue trying
                   // (Temporarily disabled marking as EXPIRED for testing purposes)
@@ -394,15 +388,17 @@ export const notificationMutations = defineMutation({
                   }
                 }
 
-                // Create delivery log
-                deliveryLogs.push({
-                  notificationId: newNotification[0].id,
-                  deviceId: device.id,
-                  status: result.success ? ('SENT' as const) : ('FAILED' as const),
-                  errorMessage: result.error,
-                  providerResponse: { messageId: result.messageId },
-                  sentAt: result.success ? new Date().toISOString() : null,
-                })
+                // Create delivery log (skip if 410 - already created above before deletion)
+                if (result.statusCode !== 410) {
+                  deliveryLogs.push({
+                    notificationId: newNotification[0].id,
+                    deviceId: device.id,
+                    status: result.success ? ('SENT' as const) : ('FAILED' as const),
+                    errorMessage: result.error,
+                    providerResponse: { messageId: result.messageId },
+                    sentAt: result.success ? new Date().toISOString() : null,
+                  })
+                }
               } catch (deviceError) {
                 totalFailed++
                 console.error(`[Notification] Device error for ${device.id}:`, deviceError)
