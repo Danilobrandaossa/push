@@ -30,9 +30,7 @@ export const appsQuery = defineQuery({
               decryptedApp.apnsPrivateKey = decryptSensitiveData(decryptedApp.apnsPrivateKey)
             }
 
-            if (decryptedApp.fcmServiceAccount && isDataEncrypted(decryptedApp.fcmServiceAccount)) {
-              decryptedApp.fcmServiceAccount = decryptSensitiveData(decryptedApp.fcmServiceAccount)
-            }
+            // fcmServerKey decryption is handled by field resolver for fcmServiceAccount
           }
           catch (decryptError) {
             console.error('[Apps Query] Error decrypting app data:', decryptError)

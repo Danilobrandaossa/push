@@ -5,34 +5,50 @@ import { decryptSensitiveData, isDataEncrypted } from '~~/server/utils/crypto'
 export const appByIdQuery = defineQuery({
   app: {
     resolve: async (_parent, { id }, { context }) => {
-      const { useDatabase, tables } = context
-      const db = useDatabase()
+      try {
+        const { useDatabase, tables } = context
+        const db = useDatabase()
 
-      const result = await db
-        .select()
-        .from(tables.app)
-        .where(eq(tables.app.id, id))
-        .limit(1)
+        console.log('[AppById Query] Fetching app with id:', id)
 
-      if (!result[0])
-        return null
+        const result = await db
+          .select()
+          .from(tables.app)
+          .where(eq(tables.app.id, id))
+          .limit(1)
 
-      const app = result[0]
+        if (!result[0]) {
+          console.log('[AppById Query] App not found:', id)
+          return null
+        }
 
-      // Decrypt sensitive fields if they are encrypted
-      if (app.vapidPrivateKey && isDataEncrypted(app.vapidPrivateKey)) {
-        app.vapidPrivateKey = decryptSensitiveData(app.vapidPrivateKey)
+        const app = result[0]
+        console.log('[AppById Query] App found:', app.id, app.name)
+
+        // Decrypt sensitive fields if they are encrypted
+        // Note: fcmServiceAccount is mapped from fcmServerKey via field resolver (handles decryption there)
+        try {
+          if (app.vapidPrivateKey && isDataEncrypted(app.vapidPrivateKey)) {
+            app.vapidPrivateKey = decryptSensitiveData(app.vapidPrivateKey)
+          }
+
+          if (app.apnsPrivateKey && isDataEncrypted(app.apnsPrivateKey)) {
+            app.apnsPrivateKey = decryptSensitiveData(app.apnsPrivateKey)
+          }
+
+          // fcmServerKey decryption is handled by field resolver for fcmServiceAccount
+        } catch (decryptError) {
+          console.error('[AppById Query] Error decrypting app data:', decryptError)
+          // Continue with encrypted data if decryption fails
+        }
+
+        console.log('[AppById Query] Returning app:', app.id)
+        return app
+      } catch (error) {
+        console.error('[AppById Query] Error fetching app:', error)
+        console.error('[AppById Query] Error stack:', error instanceof Error ? error.stack : 'No stack')
+        throw error
       }
-
-      if (app.apnsPrivateKey && isDataEncrypted(app.apnsPrivateKey)) {
-        app.apnsPrivateKey = decryptSensitiveData(app.apnsPrivateKey)
-      }
-
-      if (app.fcmServiceAccount && isDataEncrypted(app.fcmServiceAccount)) {
-        app.fcmServiceAccount = decryptSensitiveData(app.fcmServiceAccount)
-      }
-
-      return app
     },
   },
 })
