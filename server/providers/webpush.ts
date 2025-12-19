@@ -85,22 +85,23 @@ class WebPushProvider {
         preview: cleanPrivateKey.substring(0, 30) + '...'
       })
 
-      // Detect format: base64 starts with "MIG" (PKCS#8 header), base64url uses - and _
+      // VAPID keys are generated in base64url format (see generateVapidKeys())
+      // Always use base64url for private key since that's how they're stored
       let privateKeyBuffer: Buffer
-      if (cleanPrivateKey.startsWith('MIG') || cleanPrivateKey.includes('+') || cleanPrivateKey.includes('/')) {
-        // Standard base64 (PKCS#8 DER)
-        console.log('[WebPush] Using base64 format for private key')
-        privateKeyBuffer = Buffer.from(cleanPrivateKey, 'base64')
-      }
-      else if (cleanPrivateKey.includes('-') || cleanPrivateKey.includes('_')) {
-        // base64url
-        console.log('[WebPush] Using base64url format for private key')
+      try {
+        // Try base64url first (this is the format used by generateVapidKeys)
+        console.log('[WebPush] Attempting to decode private key as base64url (VAPID standard format)')
         privateKeyBuffer = Buffer.from(cleanPrivateKey, 'base64url')
-      }
-      else {
-        // Try base64 first (more common for PKCS#8)
-        console.log('[WebPush] Defaulting to base64 format for private key')
-        privateKeyBuffer = Buffer.from(cleanPrivateKey, 'base64')
+        console.log('[WebPush] Successfully decoded private key as base64url, length:', privateKeyBuffer.length)
+      } catch (base64urlError) {
+        // Fallback to base64 if base64url fails
+        console.warn('[WebPush] base64url decode failed, trying base64 format')
+        try {
+          privateKeyBuffer = Buffer.from(cleanPrivateKey, 'base64')
+          console.log('[WebPush] Successfully decoded private key as base64, length:', privateKeyBuffer.length)
+        } catch (base64Error) {
+          throw new Error(`Failed to decode private key in both base64url and base64 formats. base64url error: ${base64urlError}, base64 error: ${base64Error}`)
+        }
       }
 
       // Import the key properly using Node.js crypto
@@ -110,6 +111,36 @@ class WebPushProvider {
         type: 'pkcs8',
       })
 
+      // Verify that the private key corresponds to the public key
+      // Extract public key from private key
+      const derivedPublicKey = privateKey.asymmetricKeyDetails
+      const publicKeyFromPrivate = crypto.createPublicKey({ key: privateKey })
+
+      // Export public key as SPKI DER to extract raw EC point
+      const publicKeySpki = publicKeyFromPrivate.export({ type: 'spki', format: 'der' }) as Buffer
+      const rawPublicKeyFromPrivate = publicKeySpki.slice(-65) // Last 65 bytes is the raw EC point
+      const publicKeyBase64urlFromPrivate = rawPublicKeyFromPrivate.toString('base64url')
+
+      // Compare with the configured public key
+      const cleanPublicKeyForComparison = this.config.publicKey.replace(/\s+/g, '')
+      const keysMatch = publicKeyBase64urlFromPrivate === cleanPublicKeyForComparison
+
+      console.log('[WebPush] Verifying private key matches public key:', {
+        publicKeyFromPrivatePreview: publicKeyBase64urlFromPrivate.substring(0, 50) + '...',
+        configuredPublicKeyPreview: cleanPublicKeyForComparison.substring(0, 50) + '...',
+        keysMatch: keysMatch,
+        publicKeyFromPrivateLength: publicKeyBase64urlFromPrivate.length,
+        configuredPublicKeyLength: cleanPublicKeyForComparison.length
+      })
+
+      if (!keysMatch) {
+        console.error('[WebPush] ERROR: Private key does NOT match public key!')
+        console.error('[WebPush] This means the private and public keys are from different key pairs!')
+        console.error('[WebPush] Public key from private:', publicKeyBase64urlFromPrivate)
+        console.error('[WebPush] Configured public key:', cleanPublicKeyForComparison)
+        throw new Error('VAPID private key does not match public key - they are from different key pairs')
+      }
+
       // Export as PEM for jsonwebtoken
       const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }) as string
 
@@ -117,7 +148,8 @@ class WebPushProvider {
         pemLength: privateKeyPem.length,
         pemPreview: privateKeyPem.substring(0, 50) + '...',
         subject: this.config.vapidSubject,
-        audience
+        audience,
+        keysVerified: true
       })
 
       const token = jwt.sign(payload, privateKeyPem, {
@@ -132,17 +164,10 @@ class WebPushProvider {
         'Crypto-Key': `p256ecdsa=${cleanPublicKey}`,
       }
 
-      // Log full key for debugging and validation
-      const expectedKey = 'BIJfFcoBwqS1RLu7tjMcdwIQK86T4KdRHhc6mcxFmy0yXp0DeNY8lRl0LSFp4XThozLwobq09dzEOOcSPwstI7k'
-      const keysMatch = cleanPublicKey === expectedKey
-
       console.log('[WebPush] VAPID headers generated with full key:', {
         publicKeyFull: cleanPublicKey, // Log full key for comparison
         publicKeyPreview: cleanPublicKey.substring(0, 50) + '...',
         publicKeyLength: cleanPublicKey.length,
-        expectedKeyLength: expectedKey.length,
-        keysMatch: keysMatch,
-        keyDifference: keysMatch ? 'NONE' : `First diff at position ${cleanPublicKey.split('').findIndex((c, i) => c !== expectedKey[i])}`,
         wasPublicKeyNormalized: cleanPublicKey !== this.config.publicKey,
         publicKeyInAuth: headers.Authorization.includes(cleanPublicKey.substring(0, 20)),
         publicKeyInCryptoKey: headers['Crypto-Key'].includes(cleanPublicKey.substring(0, 20)),
@@ -153,12 +178,6 @@ class WebPushProvider {
         subject: this.config.vapidSubject,
         audience
       })
-
-      if (!keysMatch) {
-        console.warn('[WebPush] WARNING: VAPID public key does not match expected key!')
-        console.warn('[WebPush] Expected:', expectedKey)
-        console.warn('[WebPush] Actual:', cleanPublicKey)
-      }
 
       return headers
     }
@@ -305,8 +324,14 @@ class WebPushProvider {
 
       const audience = this.getAudience(message.subscription.endpoint)
       console.log('[WebPush] Audience:', audience)
+      console.log('[WebPush] Endpoint type:', message.subscription.endpoint.includes('fcm.googleapis.com') ? 'FCM (Android/Chrome Mobile)' : 'Standard Web Push')
 
       const vapidHeaders = await this.generateVapidHeaders(audience)
+      console.log('[WebPush] VAPID headers before sending:', {
+        authHeaderPreview: vapidHeaders.Authorization?.substring(0, 100) + '...',
+        cryptoKeyPreview: vapidHeaders['Crypto-Key']?.substring(0, 50) + '...',
+        publicKeyInAuth: vapidHeaders.Authorization?.includes(this.config.publicKey.replace(/\s+/g, '').substring(0, 20)) || false
+      })
       console.log('[WebPush] VAPID headers generated', {
         authorizationPreview: vapidHeaders.Authorization?.substring(0, 30) + '...',
         cryptoKeyPreview: vapidHeaders['Crypto-Key']?.substring(0, 30) + '...'

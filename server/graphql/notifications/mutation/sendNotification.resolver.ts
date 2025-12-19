@@ -242,6 +242,17 @@ export const notificationMutations = defineMutation({
                   // If VAPID credentials mismatch (403), log detailed warning but continue trying
                   // (Temporarily disabled marking as EXPIRED for testing purposes)
                   else if (result.statusCode === 403 && result.error?.includes('VAPID credentials')) {
+                    // Get current VAPID key from app
+                    const appData = await db
+                      .select({ vapidPublicKey: tables.app.vapidPublicKey })
+                      .from(tables.app)
+                      .where(eq(tables.app.id, device.appId))
+                      .limit(1)
+
+                    const currentVapidKey = appData[0]?.vapidPublicKey?.replace(/\s+/g, '') || 'NOT_FOUND'
+                    const vapidKeyUsed = device.vapidPublicKeyUsed?.replace(/\s+/g, '') || 'NOT_STORED'
+                    const keysMatch = currentVapidKey === vapidKeyUsed
+
                     console.warn(`[Notification] ⚠️ Device ${device.id} has VAPID credentials mismatch (403)`)
                     console.warn(`[Notification] ⚠️ This device was subscribed with a DIFFERENT VAPID key than the current one`)
                     console.warn(`[Notification] ⚠️ WARNING: Continuing to attempt sends for testing (notification will likely fail)`)
@@ -254,8 +265,21 @@ export const notificationMutations = defineMutation({
                       createdAt: device.createdAt,
                       hasWebPushKeys: !!(device.webPushP256dh && device.webPushAuth)
                     })
-                    console.warn(`[Notification] ⚠️ Current VAPID key: BIJfFcoBwqS1RLu7tjMcdwIQK86T4KdRHhc6mcxFmy0yXp0DeNY8lRl0LSFp4XThozLwobq09dzEOOcSPwstI7k`)
-                    console.warn(`[Notification] ⚠️ SOLUTION: Delete this device and create a NEW subscription with the correct VAPID key`)
+                    console.warn(`[Notification] ⚠️ VAPID Key Comparison:`)
+                    console.warn(`[Notification] ⚠️   - Key used at registration: ${vapidKeyUsed.substring(0, 50)}... (length: ${vapidKeyUsed.length})`)
+                    console.warn(`[Notification] ⚠️   - Current key in app: ${currentVapidKey.substring(0, 50)}... (length: ${currentVapidKey.length})`)
+                    console.warn(`[Notification] ⚠️   - Keys match: ${keysMatch}`)
+                    if (!keysMatch && vapidKeyUsed !== 'NOT_STORED' && currentVapidKey !== 'NOT_FOUND') {
+                      console.warn(`[Notification] ⚠️   - First difference at position: ${currentVapidKey.split('').findIndex((c, i) => c !== vapidKeyUsed[i])}`)
+                    }
+                    console.warn(`[Notification] ⚠️ SOLUTION: Device must unsubscribe and create a NEW subscription`)
+                    console.warn(`[Notification] ⚠️ MOTIVO: Subscription foi criada com chaves VAPID diferentes das atuais`)
+                    console.warn(`[Notification] ⚠️ EXPLICAÇÃO TÉCNICA:`)
+                    console.warn(`[Notification] ⚠️   - Quando uma subscription é criada, o FCM/Chrome vincula o endpoint às chaves VAPID usadas`)
+                    console.warn(`[Notification] ⚠️   - Esse vínculo é IMUTÁVEL - não pode ser alterado`)
+                    console.warn(`[Notification] ⚠️   - O FCM valida o JWT usando a chave pública original da subscription`)
+                    console.warn(`[Notification] ⚠️   - Se as chaves não correspondem, retorna 403`)
+                    console.warn(`[Notification] ⚠️   - A única solução é criar uma NOVA subscription (novo endpoint) com as chaves corretas`)
                     // TEMPORARILY DISABLED: Don't mark as EXPIRED for testing
                     // try {
                     //   await db
