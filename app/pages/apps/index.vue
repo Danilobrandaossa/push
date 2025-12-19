@@ -12,8 +12,16 @@ definePageMeta({
 })
 
 // API queries
-const { data: appsData } = useApps()
+const { data: appsData, error: appsError, isLoading: appsLoading } = useApps()
 const apps = computed(() => appsData.value || [])
+
+// Debug: Log apps data
+watch([appsData, appsError, appsLoading], ([data, error, loading]) => {
+  console.log('Apps query state:', { data, error, loading })
+  if (error) {
+    console.error('Error loading apps:', error)
+  }
+}, { immediate: true })
 
 // Reactive data
 const testLoading = ref(false)
@@ -148,6 +156,23 @@ async function sendTest() {
           </div>
         </CardContent>
       </Card>
+    </div>
+
+    <!-- Loading State -->
+    <div v-else-if="appsLoading" class="text-center py-12">
+      <Icon name="lucide:loader-2" class="mx-auto h-12 w-12 text-muted-foreground mb-4 animate-spin" />
+      <h3 class="text-lg font-medium mb-2">Loading applications...</h3>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="appsError" class="text-center py-12">
+      <Icon name="lucide:alert-circle" class="mx-auto h-12 w-12 text-destructive mb-4" />
+      <h3 class="text-lg font-medium mb-2 text-destructive">Error loading applications</h3>
+      <p class="text-muted-foreground mb-6">{{ appsError.message || 'An error occurred while loading applications' }}</p>
+      <Button @click="window.location.reload()">
+        <Icon name="lucide:refresh-cw" class="mr-2 size-4" />
+        Retry
+      </Button>
     </div>
 
     <!-- Empty State -->

@@ -316,11 +316,16 @@ export const notificationMutations = defineMutation({
           await db.insert(tables.deliveryLog).values(deliveryLogs)
         }
 
+        // Count delivered: For Web Push, 'SENT' means delivered (no callback available)
+        // For FCM/APNs, 'SENT' is initial confirmation, will be updated to 'DELIVERED' via callback
+        const totalDelivered = deliveryLogs.filter(log => log.status === 'SENT').length
+
         // Update notification statistics
         await db
           .update(tables.notification)
           .set({
             totalSent,
+            totalDelivered,
             totalFailed,
             status: 'SENT',
             sentAt: new Date().toISOString(),
@@ -328,11 +333,16 @@ export const notificationMutations = defineMutation({
           .where(eq(tables.notification.id, newNotification[0].id))
       }
 
+      // Get updated notification with correct totals
+      const updatedNotification = await db
+        .select()
+        .from(tables.notification)
+        .where(eq(tables.notification.id, newNotification[0].id))
+        .limit(1)
+
       return {
-        ...newNotification[0],
+        ...updatedNotification[0],
         totalTargets: targetDevices.length,
-        totalSent,
-        totalFailed,
       }
     },
   },

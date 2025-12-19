@@ -5,8 +5,24 @@ export function useApps() {
   return useQuery({
     key: ['apps'],
     query: async () => {
-      const result = await $sdk.apps()
-      return result.data?.apps || []
+      try {
+        console.log('[useApps] Fetching apps from API...')
+        const result = await $sdk.apps()
+        console.log('[useApps] API response:', result)
+
+        if (result.errors) {
+          console.error('[useApps] GraphQL errors:', result.errors)
+          throw new Error(result.errors.map((e: any) => e.message).join(', '))
+        }
+
+        const apps = result.data?.apps || []
+        console.log(`[useApps] Retrieved ${apps.length} app(s)`)
+        return apps
+      }
+      catch (error) {
+        console.error('[useApps] Error fetching apps:', error)
+        throw error
+      }
     },
   })
 }
