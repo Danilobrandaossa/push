@@ -9,6 +9,9 @@ dist
 # Node dependencies
 node_modules
 
+#plugin
+gteck-push-plugin
+
 # Logs
 logs
 *.log
