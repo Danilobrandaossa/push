@@ -164,6 +164,11 @@ class WebPushProvider {
         'Crypto-Key': `p256ecdsa=${cleanPublicKey}`,
       }
 
+      // Log private key preview (first/last chars only for security)
+      const privateKeyPreview = cleanPrivateKey.length > 60
+        ? cleanPrivateKey.substring(0, 30) + '...' + cleanPrivateKey.substring(cleanPrivateKey.length - 10)
+        : cleanPrivateKey.substring(0, 30) + '...'
+
       console.log('[WebPush] VAPID headers generated with full key:', {
         publicKeyFull: cleanPublicKey, // Log full key for comparison
         publicKeyPreview: cleanPublicKey.substring(0, 50) + '...',
@@ -173,10 +178,15 @@ class WebPushProvider {
         publicKeyInCryptoKey: headers['Crypto-Key'].includes(cleanPublicKey.substring(0, 20)),
         publicKeyFirstChar: cleanPublicKey.charAt(0),
         publicKeyLastChar: cleanPublicKey.charAt(cleanPublicKey.length - 1),
+        privateKeyPreview: privateKeyPreview,
+        privateKeyLength: cleanPrivateKey.length,
+        privateKeyDerivedPublicKey: publicKeyBase64urlFromPrivate, // Log the public key derived from private key
+        keysVerified: keysMatch, // Should always be true if we got here
         tokenPreview: token.substring(0, 30) + '...',
         tokenLength: token.length,
         subject: this.config.vapidSubject,
-        audience
+        audience,
+        note: 'If 403 occurs despite matching public keys, the subscription was created with a different private key'
       })
 
       return headers

@@ -1,6 +1,7 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { defineMutation } from 'nitro-graphql/utils/define'
 import { encryptSensitiveData, decryptSensitiveData, isDataEncrypted } from '~~/server/utils/crypto'
+import { createError } from 'h3'
 
 export const configureWebPushMutation = defineMutation({
   configureWebPush: {
@@ -43,6 +44,10 @@ export const configureWebPushMutation = defineMutation({
         const normalizedPublicKey = input.publicKey.replace(/\s+/g, '')
         const normalizedPrivateKey = input.privateKey.replace(/\s+/g, '')
 
+        // Check if VAPID keys are changing
+        const oldPublicKey = app[0]?.vapidPublicKey?.replace(/\s+/g, '') || null
+        const keysAreChanging = oldPublicKey && oldPublicKey !== normalizedPublicKey
+
         console.log('[configureWebPush] Normalizing VAPID keys:', {
           appId: id,
           publicKeyOriginalLength: input.publicKey.length,
@@ -52,7 +57,9 @@ export const configureWebPushMutation = defineMutation({
           privateKeyNormalizedLength: normalizedPrivateKey.length,
           wasPrivateKeyNormalized: normalizedPrivateKey !== input.privateKey,
           publicKeyPreview: normalizedPublicKey.substring(0, 30) + '...',
-          privateKeyPreview: normalizedPrivateKey.substring(0, 30) + '...'
+          privateKeyPreview: normalizedPrivateKey.substring(0, 30) + '...',
+          keysAreChanging: keysAreChanging,
+          oldPublicKeyPreview: oldPublicKey ? oldPublicKey.substring(0, 30) + '...' : 'none'
         })
 
         // Encrypt sensitive private key before storing
@@ -69,6 +76,32 @@ export const configureWebPushMutation = defineMutation({
           })
           .where(eq(tables.app.id, id))
           .returning()
+
+        // CRITICAL: If VAPID keys changed, invalidate all existing WEB devices
+        // This is necessary because subscriptions are bound to the key pair used during creation
+        // Old subscriptions will fail with 403 if we try to send with new keys
+        if (keysAreChanging) {
+          console.warn('[configureWebPush] ⚠️ VAPID keys are changing - invalidating all existing WEB devices')
+          console.warn('[configureWebPush] ⚠️ Old subscriptions were created with different keys and will fail with 403')
+          console.warn('[configureWebPush] ⚠️ Marking all WEB devices as EXPIRED to force re-subscription with new keys')
+
+          const expiredDevices = await db
+            .update(tables.device)
+            .set({
+              status: 'EXPIRED',
+              updatedAt: new Date().toISOString(),
+            })
+            .where(
+              and(
+                eq(tables.device.appId, id),
+                eq(tables.device.platform, 'WEB')
+              )
+            )
+            .returning()
+
+          console.log(`[configureWebPush] ✅ Marked ${expiredDevices.length} WEB devices as EXPIRED`)
+          console.log(`[configureWebPush] ✅ These devices will need to create new subscriptions with the updated VAPID keys`)
+        }
 
         if (!updatedApp[0]) {
           throw createError({

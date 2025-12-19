@@ -1,4 +1,5 @@
 import { and, eq, inArray, ne, desc } from 'drizzle-orm'
+import { createError } from 'h3'
 import { defineMutation } from 'nitro-graphql/utils/define'
 import { getProviderForApp } from '~~/server/providers'
 
@@ -28,6 +29,13 @@ export const notificationMutations = defineMutation({
           totalClicked: 0,
         })
         .returning()
+
+      if (!newNotification[0]) {
+        throw createError({
+          statusCode: 500,
+          message: 'Failed to create notification',
+        })
+      }
 
       // Get target devices
       let targetDevices = []
@@ -86,6 +94,7 @@ export const notificationMutations = defineMutation({
       let totalFailed = 0
       const deliveryLogs: Array<typeof tables.deliveryLog.$inferInsert> = []
 
+      // Only send immediately if not scheduled and there are target devices
       if (!input.scheduledAt && targetDevices.length > 0) {
         // Group devices by platform for efficient sending
         const devicesByPlatform = targetDevices.reduce((acc: Record<string, any[]>, device: any) => {
@@ -119,9 +128,68 @@ export const notificationMutations = defineMutation({
             const provider = await getProviderForApp(input.appId, providerPlatform)
             console.log(`[Notification] Provider created for platform ${platform}`)
 
+            // PRE-VALIDATION: For Web Push, get current VAPID key from app to validate against device registration
+            // This prevents attempting to send to devices that will definitely fail with 403
+            let currentVapidPublicKey: string | null = null
+            if (platform === 'web') {
+              const appData = await db
+                .select({ vapidPublicKey: tables.app.vapidPublicKey })
+                .from(tables.app)
+                .where(eq(tables.app.id, input.appId))
+                .limit(1)
+              currentVapidPublicKey = appData[0]?.vapidPublicKey?.replace(/\s+/g, '') || null
+              console.log(`[Notification] Current VAPID key for validation: ${currentVapidPublicKey ? currentVapidPublicKey.substring(0, 50) + '...' : 'NOT_FOUND'}`)
+            }
+
             for (const device of (devices as any[])) {
               try {
                 console.log(`[Notification] Processing device ${device.id} (platform: ${device.platform})`)
+
+                // PRE-VALIDATION: For Web Push, check if device was registered with current VAPID key
+                // Skip devices that will definitely fail with 403 (VAPID mismatch)
+                if (platform === 'web' && currentVapidPublicKey && device.vapidPublicKeyUsed) {
+                  const deviceVapidKey = device.vapidPublicKeyUsed.replace(/\s+/g, '')
+                  const keysMatch = currentVapidPublicKey === deviceVapidKey
+
+                  if (!keysMatch) {
+                    console.warn(`[Notification] ⚠️ PRE-VALIDATION FAILED: Device ${device.id} VAPID mismatch detected`)
+                    console.warn(`[Notification] ⚠️   - Key at registration: ${deviceVapidKey.substring(0, 50)}... (length: ${deviceVapidKey.length})`)
+                    console.warn(`[Notification] ⚠️   - Current key in app: ${currentVapidPublicKey.substring(0, 50)}... (length: ${currentVapidPublicKey.length})`)
+                    console.warn(`[Notification] ⚠️   - This device will fail with 403 - marking as EXPIRED and skipping`)
+
+                    // Mark as EXPIRED before attempting to send (prevents wasted API calls and 403 errors)
+                    try {
+                      await db
+                        .update(tables.device)
+                        .set({
+                          status: 'EXPIRED',
+                          updatedAt: new Date().toISOString(),
+                        })
+                        .where(eq(tables.device.id, device.id))
+                      console.log(`[Notification] ✅ Device ${device.id} pre-validated and marked as EXPIRED - skipping send`)
+
+                      totalFailed++
+                      deliveryLogs.push({
+                        notificationId: newNotification[0].id,
+                        deviceId: device.id,
+                        status: 'FAILED' as const,
+                        errorMessage: 'VAPID key mismatch: Device registered with different VAPID key. Device needs to re-subscribe with current VAPID keys.',
+                        sentAt: null,
+                      })
+                      continue // Skip this device, don't attempt to send
+                    } catch (updateError) {
+                      console.error(`[Notification] Failed to mark device ${device.id} as expired in pre-validation:`, updateError)
+                      // Continue to attempt send (will fail with 403, then be marked as expired)
+                    }
+                  } else {
+                    // Even if public keys match, the subscription might still fail if:
+                    // 1. The private key being used doesn't match the private key that created the subscription
+                    // 2. The subscription was created with a different key pair (even if public key looks the same after normalization)
+                    // 3. The FCM has cached the subscription with old keys
+                    console.log(`[Notification] ✅ PRE-VALIDATION PASSED: Device ${device.id} VAPID keys match (${deviceVapidKey.substring(0, 20)}...) - safe to send`)
+                    console.log(`[Notification] 💡 If 403 error occurs despite matching public keys, it means the private key doesn't correspond to the subscription's original key pair`)
+                  }
+                }
 
                 // Build notification payload
                 const notificationPayload = {
@@ -270,17 +338,47 @@ export const notificationMutations = defineMutation({
                     console.warn(`[Notification] ⚠️   - Current key in app: ${currentVapidKey.substring(0, 50)}... (length: ${currentVapidKey.length})`)
                     console.warn(`[Notification] ⚠️   - Keys match: ${keysMatch}`)
                     if (!keysMatch && vapidKeyUsed !== 'NOT_STORED' && currentVapidKey !== 'NOT_FOUND') {
-                      console.warn(`[Notification] ⚠️   - First difference at position: ${currentVapidKey.split('').findIndex((c, i) => c !== vapidKeyUsed[i])}`)
+                      const firstDiff = currentVapidKey.split('').findIndex((c, i) => c !== vapidKeyUsed[i])
+                      console.warn(`[Notification] ⚠️   - First difference at position: ${firstDiff}`)
+                      console.warn(`[Notification] ⚠️   - Char at position ${firstDiff}: expected '${vapidKeyUsed[firstDiff]}', got '${currentVapidKey[firstDiff]}'`)
                     }
-                    console.warn(`[Notification] ⚠️ SOLUTION: Device must unsubscribe and create a NEW subscription`)
-                    console.warn(`[Notification] ⚠️ MOTIVO: Subscription foi criada com chaves VAPID diferentes das atuais`)
+
+                    // CRITICAL EXPLANATION: Even if public keys match, 403 can still occur if:
+                    // 1. The subscription was created with a DIFFERENT private key (even if public key seems the same)
+                    // 2. The FCM has cached the subscription with the original key pair
+                    // 3. The JWT is signed with a private key that doesn't match the subscription's original key pair
+                    if (keysMatch) {
+                      console.error(`[Notification] 🔴 CRITICAL: Public keys match, but 403 occurred!`)
+                      console.error(`[Notification] 🔴 This means the subscription was created with a DIFFERENT KEY PAIR`)
+                      console.error(`[Notification] 🔴 Even though public keys look the same, the private key is different`)
+                      console.error(`[Notification] 🔴 The FCM validates JWT signatures, so if private key doesn't match, it rejects`)
+                      console.error(`[Notification] 🔴 SOLUTION: Device MUST unsubscribe and create a COMPLETELY NEW subscription`)
+                      console.error(`[Notification] 🔴 IMPORTANT: The plugin must ensure unsubscribe() is called BEFORE subscribe()`)
+                    } else {
+                      console.warn(`[Notification] ⚠️ Public keys don't match - subscription was created with different keys`)
+                      console.warn(`[Notification] ⚠️ SOLUTION: Device must unsubscribe and create a NEW subscription`)
+                    }
+
                     console.warn(`[Notification] ⚠️ EXPLICAÇÃO TÉCNICA:`)
-                    console.warn(`[Notification] ⚠️   - Quando uma subscription é criada, o FCM/Chrome vincula o endpoint às chaves VAPID usadas`)
+                    console.warn(`[Notification] ⚠️   - Quando uma subscription é criada, o FCM/Chrome vincula o endpoint ao PAR de chaves VAPID (pública + privada)`)
                     console.warn(`[Notification] ⚠️   - Esse vínculo é IMUTÁVEL - não pode ser alterado`)
-                    console.warn(`[Notification] ⚠️   - O FCM valida o JWT usando a chave pública original da subscription`)
-                    console.warn(`[Notification] ⚠️   - Se as chaves não correspondem, retorna 403`)
-                    console.warn(`[Notification] ⚠️   - A única solução é criar uma NOVA subscription (novo endpoint) com as chaves corretas`)
-                    // TEMPORARILY DISABLED: Don't mark as EXPIRED for testing
+                    console.warn(`[Notification] ⚠️   - O FCM valida o JWT assinado com a chave privada contra a chave pública original`)
+                    console.warn(`[Notification] ⚠️   - Se o PAR de chaves não corresponder ao original, retorna 403`)
+                    console.warn(`[Notification] ⚠️   - A única solução é criar uma NOVA subscription (novo endpoint) com o PAR de chaves correto`)
+
+                    // Mark device as EXPIRED to force client to create new subscription
+                    try {
+                      await db
+                        .update(tables.device)
+                        .set({
+                          status: 'EXPIRED',
+                          updatedAt: new Date().toISOString(),
+                        })
+                        .where(eq(tables.device.id, device.id))
+                      console.log(`[Notification] Device ${device.id} marked as EXPIRED due to VAPID mismatch - client will need to create new subscription`)
+                    } catch (updateError) {
+                      console.error(`[Notification] Failed to mark device ${device.id} as expired:`, updateError)
+                    }
                     // try {
                     //   await db
                     //     .update(tables.device)
@@ -305,8 +403,7 @@ export const notificationMutations = defineMutation({
                   providerResponse: { messageId: result.messageId },
                   sentAt: result.success ? new Date().toISOString() : null,
                 })
-              }
-              catch (deviceError) {
+              } catch (deviceError) {
                 totalFailed++
                 console.error(`[Notification] Device error for ${device.id}:`, deviceError)
                 deliveryLogs.push({
@@ -318,8 +415,7 @@ export const notificationMutations = defineMutation({
                 })
               }
             }
-          }
-          catch (providerError) {
+          } catch (providerError) {
             // Provider creation failed, mark all devices for this platform as failed
             totalFailed += (devices as any[]).length
             console.error(`[Notification] Provider error for platform ${platform}:`, providerError)
@@ -334,38 +430,51 @@ export const notificationMutations = defineMutation({
             }
           }
         }
-
-        // Insert delivery logs
-        if (deliveryLogs.length > 0) {
-          await db.insert(tables.deliveryLog).values(deliveryLogs)
-        }
-
-        // Count delivered: For Web Push, 'SENT' means delivered (no callback available)
-        // For FCM/APNs, 'SENT' is initial confirmation, will be updated to 'DELIVERED' via callback
-        const totalDelivered = deliveryLogs.filter(log => log.status === 'SENT').length
-
-        // Update notification statistics
-        await db
-          .update(tables.notification)
-          .set({
-            totalSent,
-            totalDelivered,
-            totalFailed,
-            status: 'SENT',
-            sentAt: new Date().toISOString(),
-          })
-          .where(eq(tables.notification.id, newNotification[0].id))
       }
 
+      // Insert delivery logs
+      if (deliveryLogs.length > 0) {
+        await db.insert(tables.deliveryLog).values(deliveryLogs)
+      }
+
+      // Count delivered: For Web Push, 'SENT' means delivered (no callback available)
+      // For FCM/APNs, 'SENT' is initial confirmation, will be updated to 'DELIVERED' via callback
+      const totalDelivered = deliveryLogs.filter(log => log.status === 'SENT').length
+
+      // Update notification statistics
+      // Only update to 'SENT' if we actually sent (not scheduled and had devices)
+      // If scheduled, keep as 'SCHEDULED'. If no devices, keep as 'PENDING'.
+      const shouldMarkAsSent = !input.scheduledAt && targetDevices.length > 0
+      await db
+        .update(tables.notification)
+        .set({
+          totalSent,
+          totalDelivered,
+          totalFailed,
+          status: shouldMarkAsSent ? 'SENT' : (input.scheduledAt ? 'SCHEDULED' : 'PENDING'),
+          sentAt: shouldMarkAsSent ? new Date().toISOString() : null,
+        })
+        .where(eq(tables.notification.id, newNotification[0].id))
+
       // Get updated notification with correct totals
-      const updatedNotification = await db
+      const updatedNotificationResult = await db
         .select()
         .from(tables.notification)
         .where(eq(tables.notification.id, newNotification[0].id))
         .limit(1)
 
+      if (!updatedNotificationResult[0]) {
+        throw createError({
+          statusCode: 500,
+          message: 'Failed to retrieve updated notification',
+        })
+      }
+
+      // TypeScript assertion: we've verified it exists above
+      const notification = updatedNotificationResult[0]!
+
       return {
-        ...updatedNotification[0],
+        ...notification,
         totalTargets: targetDevices.length,
       }
     },
