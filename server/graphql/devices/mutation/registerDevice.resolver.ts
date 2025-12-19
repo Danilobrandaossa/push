@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { defineMutation } from 'nitro-graphql/utils/define'
 import { getHeader } from 'h3'
 import { processSubscriptionAutomations } from '~~/server/utils/automation'
+import { getProviderForApp } from '~~/server/providers'
 
 // Helper function to get client IP
 function getClientIP(event: any): string | null {
@@ -112,18 +113,23 @@ export const registerDeviceMutation = defineMutation({
         .from(tables.app)
         .where(eq(tables.app.id, input.appId))
         .limit(1)
-      
+
       const vapidPublicKeyUsed = app[0]?.vapidPublicKey || null
-      
-      // Use upsert with ON CONFLICT to handle unique constraint
-      console.log('[RegisterDevice] Registering device with status ACTIVE', {
+
+      // 🔒 MOBILE-SAFE: For WEB platform, create device as PENDING initially
+      // Will be marked ACTIVE only after warm-up push succeeds
+      // This prevents "natimortos" devices that fail on first real push
+      const initialStatus = (input.platform === 'WEB') ? 'PENDING' : 'ACTIVE'
+
+      console.log(`[RegisterDevice] Registering device with status ${initialStatus}`, {
         appId: input.appId,
         platform: input.platform,
         tokenPreview: cleanToken.substring(0, 50) + '...',
         hasWebPushKeys: !!(input.webPushP256dh && input.webPushAuth),
-        vapidPublicKeyUsed: vapidPublicKeyUsed ? vapidPublicKeyUsed.substring(0, 30) + '...' : 'null'
+        vapidPublicKeyUsed: vapidPublicKeyUsed ? vapidPublicKeyUsed.substring(0, 30) + '...' : 'null',
+        willDoWarmUpPush: input.platform === 'WEB'
       })
-      
+
       const device = await db
         .insert(tables.device)
         .values({
@@ -131,7 +137,7 @@ export const registerDeviceMutation = defineMutation({
           token: cleanToken,
           category: input.category,
           platform: input.platform,
-          status: 'ACTIVE',
+          status: initialStatus,
           userId: userId, // Use IP if userId not provided
           metadata: input.metadata,
           webPushP256dh: input.webPushP256dh,
@@ -147,7 +153,7 @@ export const registerDeviceMutation = defineMutation({
             webPushP256dh: input.webPushP256dh,
             webPushAuth: input.webPushAuth,
             vapidPublicKeyUsed: vapidPublicKeyUsed, // Update VAPID key used
-            status: 'ACTIVE', // Always set to ACTIVE on update
+            status: initialStatus, // Use initial status (PENDING for WEB, ACTIVE for others)
             lastSeenAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
@@ -155,51 +161,123 @@ export const registerDeviceMutation = defineMutation({
         .returning()
 
       const registeredDevice = device[0]
-      
+
       console.log('[RegisterDevice] Device registered successfully', {
         id: registeredDevice.id,
         status: registeredDevice.status,
         platform: registeredDevice.platform,
         appId: registeredDevice.appId
       })
-      
-      // Verify status is ACTIVE
-      if (registeredDevice.status !== 'ACTIVE') {
-        console.error('[RegisterDevice] WARNING: Device registered with incorrect status!', {
-          id: registeredDevice.id,
-          expected: 'ACTIVE',
-          actual: registeredDevice.status
-        })
-        
-        // Force update to ACTIVE
-        const correctedDevice = await db
-          .update(tables.device)
-          .set({
-            status: 'ACTIVE',
-            updatedAt: new Date().toISOString(),
+
+      // 🔒 MOBILE-SAFE: Warm-up push for WEB platform devices
+      // Validate subscription before marking as ACTIVE - prevents "natimortos"
+      if (input.platform === 'WEB' && input.webPushP256dh && input.webPushAuth) {
+        console.log('[RegisterDevice] 🔒 MOBILE-SAFE: Sending warm-up push to validate subscription...')
+
+        try {
+          const provider = await getProviderForApp(input.appId, 'web')
+          const warmUpMessage = (provider as any).convertNotificationPayload(
+            {
+              title: '', // Empty title = silent push (warm-up)
+              body: '',
+              data: { type: 'warmup', silent: true, deviceId: registeredDevice.id },
+            },
+            {
+              endpoint: cleanToken,
+              keys: {
+                p256dh: input.webPushP256dh,
+                auth: input.webPushAuth,
+              },
+            },
+            null, // No notification ID for warm-up
+            registeredDevice.id,
+          )
+
+          const result = await (provider as any).sendMessage(warmUpMessage)
+
+          if (result.success) {
+            // Warm-up push succeeded - mark device as ACTIVE
+            console.log('[RegisterDevice] ✅ Warm-up push succeeded - marking device as ACTIVE')
+            const activatedDevice = await db
+              .update(tables.device)
+              .set({
+                status: 'ACTIVE',
+                updatedAt: new Date().toISOString(),
+              })
+              .where(eq(tables.device.id, registeredDevice.id))
+              .returning()
+
+            console.log('[RegisterDevice] Device activated after successful warm-up push', {
+              id: activatedDevice[0].id,
+              status: activatedDevice[0].status
+            })
+
+            // Process automations after activation
+            processSubscriptionAutomations(
+              input.appId,
+              activatedDevice[0].id,
+              db,
+              tables,
+            ).catch((error) => {
+              console.error('[Automation] Error processing subscription automations:', error)
+            })
+
+            return activatedDevice[0]
+          } else {
+            // Warm-up push failed - delete device (410/403 = subscription invalid)
+            console.error('[RegisterDevice] ❌ Warm-up push failed - deleting device (subscription invalid)', {
+              error: result.error,
+              statusCode: result.statusCode
+            })
+
+            await db
+              .delete(tables.device)
+              .where(eq(tables.device.id, registeredDevice.id))
+
+            console.log('[RegisterDevice] Device deleted - subscription invalid (410/403 during warm-up)')
+
+            // Still return the device object (it was deleted, but return original for client)
+            // Client should handle deletion and retry registration
+            return registeredDevice
+          }
+        } catch (warmUpError) {
+          // Error during warm-up - log but don't fail registration
+          // Device remains PENDING - will be validated on next real push
+          console.error('[RegisterDevice] ⚠️ Error during warm-up push - device remains PENDING', {
+            error: warmUpError instanceof Error ? warmUpError.message : 'Unknown error',
+            deviceId: registeredDevice.id
           })
-          .where(eq(tables.device.id, registeredDevice.id))
-          .returning()
-        
-        console.log('[RegisterDevice] Device status corrected to ACTIVE', {
-          id: correctedDevice[0].id,
-          status: correctedDevice[0].status
+
+          // Device stays as PENDING - will be validated later
+          return registeredDevice
+        }
+      } else {
+        // Non-WEB platform or missing keys - mark as ACTIVE immediately
+        if (registeredDevice.status !== 'ACTIVE') {
+          const activatedDevice = await db
+            .update(tables.device)
+            .set({
+              status: 'ACTIVE',
+              updatedAt: new Date().toISOString(),
+            })
+            .where(eq(tables.device.id, registeredDevice.id))
+            .returning()
+
+          return activatedDevice[0]
+        }
+
+        // Process automations
+        processSubscriptionAutomations(
+          input.appId,
+          registeredDevice.id,
+          db,
+          tables,
+        ).catch((error) => {
+          console.error('[Automation] Error processing subscription automations:', error)
         })
-        
-        return correctedDevice[0]
+
+        return registeredDevice
       }
-
-      // Processar automações de inscrição em background (não bloquear resposta)
-      processSubscriptionAutomations(
-        input.appId,
-        registeredDevice.id,
-        db,
-        tables,
-      ).catch((error) => {
-        console.error('[Automation] Error processing subscription automations:', error)
-      })
-
-      return registeredDevice
     },
   },
 })

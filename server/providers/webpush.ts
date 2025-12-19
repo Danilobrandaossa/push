@@ -112,9 +112,8 @@ class WebPushProvider {
       })
 
       // Verify that the private key corresponds to the public key
-      // Extract public key from private key
-      const derivedPublicKey = privateKey.asymmetricKeyDetails
-      const publicKeyFromPrivate = crypto.createPublicKey({ key: privateKey })
+      // Extract public key from private key (KeyObject can be passed directly to createPublicKey)
+      const publicKeyFromPrivate = crypto.createPublicKey(privateKey)
 
       // Export public key as SPKI DER to extract raw EC point
       const publicKeySpki = publicKeyFromPrivate.export({ type: 'spki', format: 'der' }) as Buffer

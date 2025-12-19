@@ -274,15 +274,6 @@ export const notificationMutations = defineMutation({
                     console.error(`[Notification] 🔴 410 = morte definitiva - subscription não existe mais no FCM`)
                     console.error(`[Notification] 🔴 Device será deletado - NUNCA retentar envio para este device`)
 
-                    // Criar delivery log antes de deletar (para histórico)
-                    deliveryLogs.push({
-                      notificationId: newNotification[0].id,
-                      deviceId: device.id,
-                      status: 'FAILED' as const,
-                      errorMessage: '410 Gone: Subscription expired or unsubscribed. Device deleted permanently. Never retry.',
-                      sentAt: null,
-                    })
-
                     try {
                       // Deletar device imediatamente - 410 é morte definitiva
                       await db
@@ -291,13 +282,22 @@ export const notificationMutations = defineMutation({
 
                       console.log(`[Notification] ✅ Device ${device.id} deletado permanentemente devido a 410 Gone`)
                       console.log(`[Notification] ✅ Este device nunca mais será incluído em envios futuros`)
+                      console.log(`[Notification] ℹ️ Delivery log não será criado (device deletado - foreign key constraint)`)
 
                       // Pular para próximo device (continue)
+                      // NÃO criar delivery log - device foi deletado, não podemos criar log com foreign key
                       continue
                     } catch (deleteError) {
                       console.error(`[Notification] ❌ ERRO ao deletar device ${device.id}:`, deleteError)
-                      // Mesmo com erro, o delivery log já foi criado acima
-                      // Pular para próximo device
+                      // Se falhar ao deletar, criar delivery log para registrar o erro
+                      deliveryLogs.push({
+                        notificationId: newNotification[0].id,
+                        deviceId: device.id,
+                        status: 'FAILED' as const,
+                        errorMessage: `410 Gone: Subscription expired. Failed to delete device: ${deleteError instanceof Error ? deleteError.message : 'Unknown error'}`,
+                        sentAt: null,
+                      })
+                      // Continuar para próximo device
                       continue
                     }
                   }

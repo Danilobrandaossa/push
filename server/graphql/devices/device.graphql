@@ -13,6 +13,7 @@ enum DevicePlatform {
 }
 
 enum DeviceStatus {
+  PENDING
   ACTIVE
   INACTIVE
   EXPIRED
