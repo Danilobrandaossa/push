@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { defineMutation } from 'nitro-graphql/utils/define'
 import { encryptSensitiveData } from '~~/server/utils/crypto'
+import { createError } from 'h3'
 
 export const configureAPNsMutation = defineMutation({
   configureAPNs: {
@@ -22,8 +23,19 @@ export const configureAPNsMutation = defineMutation({
         })
       }
 
-      // Encrypt sensitive private key before storing
-      const encryptedPrivateKey = encryptSensitiveData(input.privateKey)
+      // Encrypt sensitive private key before storing (if ENCRYPTION_KEY is available)
+      let encryptedPrivateKey: string
+      try {
+        encryptedPrivateKey = encryptSensitiveData(input.privateKey)
+      } catch (encryptError) {
+        const errorMsg = encryptError instanceof Error ? encryptError.message : 'Unknown error'
+        if (errorMsg.includes('ENCRYPTION_KEY')) {
+          console.warn('[configureAPNs] ⚠️ ENCRYPTION_KEY not available - storing private key unencrypted (not recommended for production)')
+          encryptedPrivateKey = input.privateKey // Store unencrypted
+        } else {
+          throw encryptError // Re-throw other encryption errors
+        }
+      }
 
       // Update app with APNs configuration
       const updatedApp = await db

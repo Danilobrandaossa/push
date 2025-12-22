@@ -42,9 +42,29 @@ export async function getProviderForApp(appId: string, platform: 'ios' | 'androi
       }
 
       // Decrypt the service account key if it's encrypted
-      const serviceAccountKey = isDataEncrypted(appData.fcmServerKey)
-        ? decryptSensitiveData(appData.fcmServerKey)
-        : appData.fcmServerKey
+      let serviceAccountKey: string
+      const isEncrypted = isDataEncrypted(appData.fcmServerKey)
+
+      if (isEncrypted) {
+        if (!process.env.ENCRYPTION_KEY) {
+          console.warn('[Provider] FCM service account appears encrypted but ENCRYPTION_KEY not set - using as-is (assuming unencrypted)')
+          serviceAccountKey = appData.fcmServerKey
+        } else {
+          try {
+            serviceAccountKey = decryptSensitiveData(appData.fcmServerKey)
+          } catch (decryptError) {
+            const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
+            if (errorMsg.includes('ENCRYPTION_KEY')) {
+              console.warn('[Provider] FCM decryption failed (ENCRYPTION_KEY issue) - using key as-is (assuming unencrypted)')
+              serviceAccountKey = appData.fcmServerKey
+            } else {
+              throw new Error(`Failed to decrypt FCM service account: ${errorMsg}`)
+            }
+          }
+        }
+      } else {
+        serviceAccountKey = appData.fcmServerKey
+      }
 
       return new FCMProvider({
         projectId: appData.fcmProjectId,
@@ -59,9 +79,29 @@ export async function getProviderForApp(appId: string, platform: 'ios' | 'androi
       }
 
       // Decrypt the private key if it's encrypted
-      const privateKey = isDataEncrypted(appData.apnsCertificate)
-        ? decryptSensitiveData(appData.apnsCertificate)
-        : appData.apnsCertificate
+      let privateKey: string
+      const isEncrypted = isDataEncrypted(appData.apnsCertificate)
+
+      if (isEncrypted) {
+        if (!process.env.ENCRYPTION_KEY) {
+          console.warn('[Provider] APNS private key appears encrypted but ENCRYPTION_KEY not set - using as-is (assuming unencrypted)')
+          privateKey = appData.apnsCertificate
+        } else {
+          try {
+            privateKey = decryptSensitiveData(appData.apnsCertificate)
+          } catch (decryptError) {
+            const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
+            if (errorMsg.includes('ENCRYPTION_KEY')) {
+              console.warn('[Provider] APNS decryption failed (ENCRYPTION_KEY issue) - using key as-is (assuming unencrypted)')
+              privateKey = appData.apnsCertificate
+            } else {
+              throw new Error(`Failed to decrypt APNS private key: ${errorMsg}`)
+            }
+          }
+        }
+      } else {
+        privateKey = appData.apnsCertificate
+      }
 
       if (!appData.bundleId) {
         throw new Error('iOS Bundle ID not configured for this app')
@@ -82,25 +122,29 @@ export async function getProviderForApp(appId: string, platform: 'ios' | 'androi
         throw new Error('Web Push not configured for this app (missing VAPID keys or subject)')
       }
 
-      // Decrypt the private key if it's encrypted
+      // Decrypt the private key if it's encrypted, otherwise use directly
       let vapidPrivateKey: string
       const isEncrypted = isDataEncrypted(appData.vapidPrivateKey)
 
       if (isEncrypted) {
-        // Check if ENCRYPTION_KEY is available before attempting decryption
+        // Key appears to be encrypted - try to decrypt
         if (!process.env.ENCRYPTION_KEY) {
-          throw new Error(
-            'VAPID private key is encrypted but ENCRYPTION_KEY environment variable is not set. ' +
-            'Please set ENCRYPTION_KEY in your environment variables to decrypt the key, ' +
-            'or re-configure the app with an unencrypted private key.'
-          )
-        }
-
-        try {
-          vapidPrivateKey = decryptSensitiveData(appData.vapidPrivateKey)
-        } catch (decryptError) {
-          const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
-          throw new Error(`Failed to decrypt VAPID private key: ${errorMsg}. Please verify ENCRYPTION_KEY is correct.`)
+          // No ENCRYPTION_KEY available - assume key is actually unencrypted (stored before encryption was enabled)
+          console.warn('[Provider] VAPID private key appears encrypted but ENCRYPTION_KEY not set - using as-is (assuming unencrypted)')
+          vapidPrivateKey = appData.vapidPrivateKey
+        } else {
+          try {
+            vapidPrivateKey = decryptSensitiveData(appData.vapidPrivateKey)
+          } catch (decryptError) {
+            const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
+            // If decryption fails and it's an ENCRYPTION_KEY error, assume key is unencrypted
+            if (errorMsg.includes('ENCRYPTION_KEY')) {
+              console.warn('[Provider] Decryption failed (ENCRYPTION_KEY issue) - using key as-is (assuming unencrypted)')
+              vapidPrivateKey = appData.vapidPrivateKey
+            } else {
+              throw new Error(`Failed to decrypt VAPID private key: ${errorMsg}. Please verify ENCRYPTION_KEY is correct.`)
+            }
+          }
         }
       } else {
         // Key is not encrypted, use directly

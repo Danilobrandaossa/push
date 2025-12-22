@@ -62,8 +62,20 @@ export const configureWebPushMutation = defineMutation({
           oldPublicKeyPreview: oldPublicKey ? oldPublicKey.substring(0, 30) + '...' : 'none'
         })
 
-        // Encrypt sensitive private key before storing
-        const encryptedPrivateKey = encryptSensitiveData(normalizedPrivateKey)
+        // Encrypt sensitive private key before storing (if ENCRYPTION_KEY is available)
+        // If ENCRYPTION_KEY is not set, store unencrypted (less secure but allows functionality)
+        let encryptedPrivateKey: string
+        try {
+          encryptedPrivateKey = encryptSensitiveData(normalizedPrivateKey)
+        } catch (encryptError) {
+          const errorMsg = encryptError instanceof Error ? encryptError.message : 'Unknown error'
+          if (errorMsg.includes('ENCRYPTION_KEY')) {
+            console.warn('[configureWebPush] ⚠️ ENCRYPTION_KEY not available - storing private key unencrypted (not recommended for production)')
+            encryptedPrivateKey = normalizedPrivateKey // Store unencrypted
+          } else {
+            throw encryptError // Re-throw other encryption errors
+          }
+        }
 
         // Update app with Web Push configuration
         const updatedApp = await db
@@ -113,7 +125,12 @@ export const configureWebPushMutation = defineMutation({
         // Decrypt private key for response (so frontend can display it)
         const result = { ...updatedApp[0] }
         if (result.vapidPrivateKey && isDataEncrypted(result.vapidPrivateKey)) {
-          result.vapidPrivateKey = decryptSensitiveData(result.vapidPrivateKey)
+          if (process.env.ENCRYPTION_KEY) {
+            result.vapidPrivateKey = decryptSensitiveData(result.vapidPrivateKey)
+          } else {
+            // No ENCRYPTION_KEY - assume key is unencrypted despite format
+            console.warn('[configureWebPush] ENCRYPTION_KEY not set - returning VAPID key as-is')
+          }
         }
 
         return result

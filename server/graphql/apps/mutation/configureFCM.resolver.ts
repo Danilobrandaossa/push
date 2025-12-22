@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { defineMutation } from 'nitro-graphql/utils/define'
 import { encryptSensitiveData } from '~~/server/utils/crypto'
+import { createError } from 'h3'
 
 export const configureFCMMutation = defineMutation({
   configureFCM: {
@@ -33,8 +34,19 @@ export const configureFCMMutation = defineMutation({
         })
       }
 
-      // Encrypt sensitive service account JSON before storing
-      const encryptedServiceAccount = encryptSensitiveData(input.serviceAccount)
+      // Encrypt sensitive service account JSON before storing (if ENCRYPTION_KEY is available)
+      let encryptedServiceAccount: string
+      try {
+        encryptedServiceAccount = encryptSensitiveData(input.serviceAccount)
+      } catch (encryptError) {
+        const errorMsg = encryptError instanceof Error ? encryptError.message : 'Unknown error'
+        if (errorMsg.includes('ENCRYPTION_KEY')) {
+          console.warn('[configureFCM] ⚠️ ENCRYPTION_KEY not available - storing service account unencrypted (not recommended for production)')
+          encryptedServiceAccount = input.serviceAccount // Store unencrypted
+        } else {
+          throw encryptError // Re-throw other encryption errors
+        }
+      }
 
       // Update app with FCM configuration
       const updatedApp = await db

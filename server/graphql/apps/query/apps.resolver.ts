@@ -23,11 +23,20 @@ export const appsQuery = defineQuery({
 
           try {
             if (decryptedApp.vapidPrivateKey && isDataEncrypted(decryptedApp.vapidPrivateKey)) {
-              decryptedApp.vapidPrivateKey = decryptSensitiveData(decryptedApp.vapidPrivateKey)
+              if (process.env.ENCRYPTION_KEY) {
+                decryptedApp.vapidPrivateKey = decryptSensitiveData(decryptedApp.vapidPrivateKey)
+              } else {
+                // No ENCRYPTION_KEY - assume key is unencrypted despite format
+                console.warn('[Apps Query] ENCRYPTION_KEY not set - using VAPID key as-is')
+              }
             }
 
             if (decryptedApp.apnsPrivateKey && isDataEncrypted(decryptedApp.apnsPrivateKey)) {
-              decryptedApp.apnsPrivateKey = decryptSensitiveData(decryptedApp.apnsPrivateKey)
+              if (process.env.ENCRYPTION_KEY) {
+                decryptedApp.apnsPrivateKey = decryptSensitiveData(decryptedApp.apnsPrivateKey)
+              } else {
+                console.warn('[Apps Query] ENCRYPTION_KEY not set - using APNS key as-is')
+              }
             }
 
             // fcmServerKey decryption is handled by field resolver for fcmServiceAccount

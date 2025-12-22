@@ -16,7 +16,13 @@ export const appFieldsResolver = defineField({
         // Decrypt if encrypted
         try {
           if (isDataEncrypted(fcmServerKey)) {
-            return decryptSensitiveData(fcmServerKey)
+            if (process.env.ENCRYPTION_KEY) {
+              return decryptSensitiveData(fcmServerKey)
+            } else {
+              // No ENCRYPTION_KEY - assume key is unencrypted despite format
+              console.warn('[App fcmServiceAccount Field] ENCRYPTION_KEY not set - returning FCM key as-is')
+              return fcmServerKey
+            }
           }
           return fcmServerKey
         } catch (error) {
