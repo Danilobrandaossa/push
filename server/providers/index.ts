@@ -47,20 +47,18 @@ export async function getProviderForApp(appId: string, platform: 'ios' | 'androi
 
       if (isEncrypted) {
         if (!process.env.ENCRYPTION_KEY) {
-          console.warn('[Provider] FCM service account appears encrypted but ENCRYPTION_KEY not set - using as-is (assuming unencrypted)')
-          serviceAccountKey = appData.fcmServerKey
-        } else {
-          try {
-            serviceAccountKey = decryptSensitiveData(appData.fcmServerKey)
-          } catch (decryptError) {
-            const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
-            if (errorMsg.includes('ENCRYPTION_KEY')) {
-              console.warn('[Provider] FCM decryption failed (ENCRYPTION_KEY issue) - using key as-is (assuming unencrypted)')
-              serviceAccountKey = appData.fcmServerKey
-            } else {
-              throw new Error(`Failed to decrypt FCM service account: ${errorMsg}`)
-            }
-          }
+          throw new Error(
+            'FCM service account is encrypted in database but ENCRYPTION_KEY environment variable is not set. ' +
+            'Please either: 1) Set ENCRYPTION_KEY in your environment, or ' +
+            '2) Re-configure FCM with new credentials (they will be stored unencrypted if ENCRYPTION_KEY is not set).'
+          )
+        }
+
+        try {
+          serviceAccountKey = decryptSensitiveData(appData.fcmServerKey)
+        } catch (decryptError) {
+          const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
+          throw new Error(`Failed to decrypt FCM service account: ${errorMsg}. Please verify ENCRYPTION_KEY is correct.`)
         }
       } else {
         serviceAccountKey = appData.fcmServerKey
@@ -84,20 +82,18 @@ export async function getProviderForApp(appId: string, platform: 'ios' | 'androi
 
       if (isEncrypted) {
         if (!process.env.ENCRYPTION_KEY) {
-          console.warn('[Provider] APNS private key appears encrypted but ENCRYPTION_KEY not set - using as-is (assuming unencrypted)')
-          privateKey = appData.apnsCertificate
-        } else {
-          try {
-            privateKey = decryptSensitiveData(appData.apnsCertificate)
-          } catch (decryptError) {
-            const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
-            if (errorMsg.includes('ENCRYPTION_KEY')) {
-              console.warn('[Provider] APNS decryption failed (ENCRYPTION_KEY issue) - using key as-is (assuming unencrypted)')
-              privateKey = appData.apnsCertificate
-            } else {
-              throw new Error(`Failed to decrypt APNS private key: ${errorMsg}`)
-            }
-          }
+          throw new Error(
+            'APNS private key is encrypted in database but ENCRYPTION_KEY environment variable is not set. ' +
+            'Please either: 1) Set ENCRYPTION_KEY in your environment, or ' +
+            '2) Re-configure APNS with new credentials (they will be stored unencrypted if ENCRYPTION_KEY is not set).'
+          )
+        }
+
+        try {
+          privateKey = decryptSensitiveData(appData.apnsCertificate)
+        } catch (decryptError) {
+          const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
+          throw new Error(`Failed to decrypt APNS private key: ${errorMsg}. Please verify ENCRYPTION_KEY is correct.`)
         }
       } else {
         privateKey = appData.apnsCertificate
@@ -127,24 +123,20 @@ export async function getProviderForApp(appId: string, platform: 'ios' | 'androi
       const isEncrypted = isDataEncrypted(appData.vapidPrivateKey)
 
       if (isEncrypted) {
-        // Key appears to be encrypted - try to decrypt
+        // Key is encrypted - must decrypt before use
         if (!process.env.ENCRYPTION_KEY) {
-          // No ENCRYPTION_KEY available - assume key is actually unencrypted (stored before encryption was enabled)
-          console.warn('[Provider] VAPID private key appears encrypted but ENCRYPTION_KEY not set - using as-is (assuming unencrypted)')
-          vapidPrivateKey = appData.vapidPrivateKey
-        } else {
-          try {
-            vapidPrivateKey = decryptSensitiveData(appData.vapidPrivateKey)
-          } catch (decryptError) {
-            const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
-            // If decryption fails and it's an ENCRYPTION_KEY error, assume key is unencrypted
-            if (errorMsg.includes('ENCRYPTION_KEY')) {
-              console.warn('[Provider] Decryption failed (ENCRYPTION_KEY issue) - using key as-is (assuming unencrypted)')
-              vapidPrivateKey = appData.vapidPrivateKey
-            } else {
-              throw new Error(`Failed to decrypt VAPID private key: ${errorMsg}. Please verify ENCRYPTION_KEY is correct.`)
-            }
-          }
+          throw new Error(
+            'VAPID private key is encrypted in database but ENCRYPTION_KEY environment variable is not set. ' +
+            'Please either: 1) Set ENCRYPTION_KEY in your environment, or ' +
+            '2) Re-configure the app with new VAPID keys (they will be stored unencrypted if ENCRYPTION_KEY is not set).'
+          )
+        }
+
+        try {
+          vapidPrivateKey = decryptSensitiveData(appData.vapidPrivateKey)
+        } catch (decryptError) {
+          const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
+          throw new Error(`Failed to decrypt VAPID private key: ${errorMsg}. Please verify ENCRYPTION_KEY is correct.`)
         }
       } else {
         // Key is not encrypted, use directly

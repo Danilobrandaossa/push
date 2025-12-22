@@ -254,9 +254,9 @@ export const registerDeviceMutation = defineMutation({
           const errorMessage = warmUpError instanceof Error ? warmUpError.message : 'Unknown error'
 
           // Special handling for encryption key errors
-          // If ENCRYPTION_KEY is missing but the private key might already be decrypted in the database,
-          // we'll mark the device as ACTIVE and let it be validated on the first real push
-          if (errorMessage.includes('ENCRYPTION_KEY')) {
+          // If the private key is encrypted but ENCRYPTION_KEY is missing, we cannot send push notifications
+          // In this case, mark device as ACTIVE but log a warning - push notifications will fail until ENCRYPTION_KEY is set
+          if (errorMessage.includes('ENCRYPTION_KEY') || errorMessage.includes('encrypted in database')) {
             console.warn('[RegisterDevice] ⚠️ ENCRYPTION_KEY missing during warm-up push', {
               error: errorMessage,
               deviceId: registeredDevice.id,
