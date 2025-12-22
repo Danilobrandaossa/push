@@ -30,7 +30,12 @@ export const appByIdQuery = defineQuery({
         try {
           if (app.vapidPrivateKey && isDataEncrypted(app.vapidPrivateKey)) {
             if (process.env.ENCRYPTION_KEY) {
-              app.vapidPrivateKey = decryptSensitiveData(app.vapidPrivateKey)
+              try {
+                app.vapidPrivateKey = decryptSensitiveData(app.vapidPrivateKey)
+              } catch (decryptError) {
+                // If decryption fails, use as-is (key may not actually be encrypted)
+                console.warn('[AppById Query] Failed to decrypt VAPID key, using as-is:', decryptError instanceof Error ? decryptError.message : 'Unknown error')
+              }
             } else {
               // No ENCRYPTION_KEY - assume key is unencrypted despite format
               console.warn('[AppById Query] ENCRYPTION_KEY not set - using VAPID key as-is')
@@ -39,7 +44,12 @@ export const appByIdQuery = defineQuery({
 
           if (app.apnsPrivateKey && isDataEncrypted(app.apnsPrivateKey)) {
             if (process.env.ENCRYPTION_KEY) {
-              app.apnsPrivateKey = decryptSensitiveData(app.apnsPrivateKey)
+              try {
+                app.apnsPrivateKey = decryptSensitiveData(app.apnsPrivateKey)
+              } catch (decryptError) {
+                // If decryption fails, use as-is
+                console.warn('[AppById Query] Failed to decrypt APNS key, using as-is:', decryptError instanceof Error ? decryptError.message : 'Unknown error')
+              }
             } else {
               console.warn('[AppById Query] ENCRYPTION_KEY not set - using APNS key as-is')
             }

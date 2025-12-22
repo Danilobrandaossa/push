@@ -123,24 +123,48 @@ export async function getProviderForApp(appId: string, platform: 'ios' | 'androi
       const isEncrypted = isDataEncrypted(appData.vapidPrivateKey)
 
       if (isEncrypted) {
-        // Key is encrypted - must decrypt before use
-        if (!process.env.ENCRYPTION_KEY) {
+        // Key appears to be encrypted - must decrypt before use
+        // Cannot use encrypted string as private key directly
+        const hasEncryptionKey = !!process.env.ENCRYPTION_KEY
+        const encryptionKeyLength = process.env.ENCRYPTION_KEY?.length || 0
+        console.log('[Provider] VAPID private key is encrypted:', {
+          hasEncryptionKey,
+          encryptionKeyLength,
+          encryptedKeyPreview: appData.vapidPrivateKey.substring(0, 50) + '...',
+          encryptedKeyFormat: appData.vapidPrivateKey.split(':').length === 3 ? 'iv:tag:data' : 'invalid'
+        })
+
+        if (!hasEncryptionKey) {
           throw new Error(
             'VAPID private key is encrypted in database but ENCRYPTION_KEY environment variable is not set. ' +
-            'Please either: 1) Set ENCRYPTION_KEY in your environment, or ' +
-            '2) Re-configure the app with new VAPID keys (they will be stored unencrypted if ENCRYPTION_KEY is not set).'
+            'Please set ENCRYPTION_KEY in your environment to decrypt the key, or re-configure the app with new VAPID keys.'
           )
         }
 
         try {
           vapidPrivateKey = decryptSensitiveData(appData.vapidPrivateKey)
+          console.log('[Provider] Successfully decrypted VAPID private key:', {
+            decryptedKeyLength: vapidPrivateKey.length,
+            decryptedKeyPreview: vapidPrivateKey.substring(0, 50) + '...'
+          })
         } catch (decryptError) {
           const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
-          throw new Error(`Failed to decrypt VAPID private key: ${errorMsg}. Please verify ENCRYPTION_KEY is correct.`)
+          console.error('[Provider] Failed to decrypt VAPID private key:', {
+            error: errorMsg,
+            hasEncryptionKey,
+            encryptionKeyLength,
+            encryptedDataPreview: appData.vapidPrivateKey.substring(0, 100) + '...'
+          })
+          throw new Error(
+            `Failed to decrypt VAPID private key: ${errorMsg}. ` +
+            'The key is stored in encrypted format but cannot be decrypted. ' +
+            'Please verify ENCRYPTION_KEY is correct, or re-configure the app with new VAPID keys.'
+          )
         }
       } else {
         // Key is not encrypted, use directly
         vapidPrivateKey = appData.vapidPrivateKey
+        console.log('[Provider] VAPID private key is not encrypted, using directly')
       }
 
       // Normalize VAPID keys (remove any whitespace)

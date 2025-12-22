@@ -24,7 +24,12 @@ export const appsQuery = defineQuery({
           try {
             if (decryptedApp.vapidPrivateKey && isDataEncrypted(decryptedApp.vapidPrivateKey)) {
               if (process.env.ENCRYPTION_KEY) {
-                decryptedApp.vapidPrivateKey = decryptSensitiveData(decryptedApp.vapidPrivateKey)
+                try {
+                  decryptedApp.vapidPrivateKey = decryptSensitiveData(decryptedApp.vapidPrivateKey)
+                } catch (decryptError) {
+                  // If decryption fails, use as-is (key may not actually be encrypted)
+                  console.warn('[Apps Query] Failed to decrypt VAPID key, using as-is:', decryptError instanceof Error ? decryptError.message : 'Unknown error')
+                }
               } else {
                 // No ENCRYPTION_KEY - assume key is unencrypted despite format
                 console.warn('[Apps Query] ENCRYPTION_KEY not set - using VAPID key as-is')
