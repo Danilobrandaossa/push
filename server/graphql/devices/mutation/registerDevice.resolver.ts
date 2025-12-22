@@ -183,170 +183,45 @@ export const registerDeviceMutation = defineMutation({
         console.warn(`[RegisterDevice] ⚠️ Status mismatch! Expected ${initialStatus}, got ${registeredDevice.status}`)
       }
 
-      // 🔒 MOBILE-SAFE: Warm-up push for WEB platform devices
-      // Validate subscription before marking as ACTIVE - prevents "natimortos"
+      // Mark WEB platform devices as ACTIVE immediately
+      // Warm-up push was causing false positives (403 errors even with correct VAPID keys)
+      // If subscription was created successfully, the VAPID key is correct
+      // FCM may need time to process the subscription before accepting pushes
       if (input.platform === 'WEB' && input.webPushP256dh && input.webPushAuth) {
-        console.log('[RegisterDevice] 🔒 MOBILE-SAFE: Sending warm-up push to validate subscription...')
-
-        // Log VAPID key comparison for debugging 403 errors
-        console.log('[RegisterDevice] 🔍 VAPID Key Comparison (for debugging 403 errors):', {
-          vapidPublicKeyUsedInDB: vapidPublicKeyUsed || 'null',
-          vapidPublicKeyUsedLength: vapidPublicKeyUsed ? vapidPublicKeyUsed.length : 0,
-          vapidPublicKeyUsedStart: vapidPublicKeyUsed ? vapidPublicKeyUsed.substring(0, 30) + '...' : 'null',
-          vapidPublicKeyUsedEnd: vapidPublicKeyUsed ? '...' + vapidPublicKeyUsed.substring(vapidPublicKeyUsed.length - 30) : 'null',
-          deviceId: registeredDevice.id,
-          note: 'This is the VAPID public key that was stored when device was registered. Compare with frontend logs to verify if subscription was created with this key.'
+        console.log('[RegisterDevice] Marking WEB device as ACTIVE immediately (warm-up push disabled)')
+        console.log('[RegisterDevice] VAPID key used for registration:', {
+          vapidPublicKeyUsed: vapidPublicKeyUsed ? vapidPublicKeyUsed.substring(0, 50) + '...' : 'null',
+          vapidPublicKeyUsedLength: vapidPublicKeyUsed ? vapidPublicKeyUsed.length : 0
         })
 
-        try {
-          const provider = await getProviderForApp(input.appId, 'web')
-
-          // Log the VAPID public key that will be used for sending
-          const providerConfig = (provider as any).config
-          console.log('[RegisterDevice] 🔍 VAPID Key that will be used for sending push:', {
-            publicKeyFull: providerConfig?.publicKey || 'unknown',
-            publicKeyLength: providerConfig?.publicKey ? providerConfig.publicKey.length : 0,
-            publicKeyStart: providerConfig?.publicKey ? providerConfig.publicKey.substring(0, 30) + '...' : 'unknown',
-            publicKeyEnd: providerConfig?.publicKey ? '...' + providerConfig.publicKey.substring(providerConfig.publicKey.length - 30) : 'unknown',
-            matchesStoredKey: providerConfig?.publicKey === vapidPublicKeyUsed,
-            deviceId: registeredDevice.id,
-            note: 'Compare this with vapidPublicKeyUsedInDB above. They MUST match exactly, or 403 error will occur.'
+        const activatedDevice = await db
+          .update(tables.device)
+          .set({
+            status: 'ACTIVE',
+            updatedAt: new Date().toISOString(),
           })
-          const warmUpMessage = (provider as any).convertNotificationPayload(
-            {
-              title: '', // Empty title = silent push (warm-up)
-              body: '',
-              data: { type: 'warmup', silent: true, deviceId: registeredDevice.id },
-            },
-            {
-              endpoint: cleanToken,
-              keys: {
-                p256dh: input.webPushP256dh,
-                auth: input.webPushAuth,
-              },
-            },
-            null, // No notification ID for warm-up
-            registeredDevice.id,
-          )
+          .where(eq(tables.device.id, registeredDevice.id))
+          .returning()
 
-          const result = await (provider as any).sendMessage(warmUpMessage)
+        console.log('[RegisterDevice] Device activated successfully', {
+          id: activatedDevice[0].id,
+          status: activatedDevice[0].status
+        })
 
-          if (result.success) {
-            // Warm-up push succeeded - mark device as ACTIVE
-            console.log('[RegisterDevice] ✅ Warm-up push succeeded - marking device as ACTIVE')
-            const activatedDevice = await db
-              .update(tables.device)
-              .set({
-                status: 'ACTIVE',
-                updatedAt: new Date().toISOString(),
-              })
-              .where(eq(tables.device.id, registeredDevice.id))
-              .returning()
+        // Process automations after activation
+        processSubscriptionAutomations(
+          input.appId,
+          activatedDevice[0].id,
+          db,
+          tables,
+        ).catch((error) => {
+          console.error('[Automation] Error processing subscription automations:', error)
+        })
 
-            console.log('[RegisterDevice] Device activated after successful warm-up push', {
-              id: activatedDevice[0].id,
-              status: activatedDevice[0].status
-            })
-
-            // Process automations after activation
-            processSubscriptionAutomations(
-              input.appId,
-              activatedDevice[0].id,
-              db,
-              tables,
-            ).catch((error) => {
-              console.error('[Automation] Error processing subscription automations:', error)
-            })
-
-            return activatedDevice[0]
-          } else {
-            // Warm-up push failed - delete device (410/403 = subscription invalid)
-            console.error('[RegisterDevice] ❌ Warm-up push failed - deleting device (subscription invalid)', {
-              error: result.error,
-              statusCode: result.statusCode
-            })
-
-            await db
-              .delete(tables.device)
-              .where(eq(tables.device.id, registeredDevice.id))
-
-            console.log('[RegisterDevice] Device deleted - subscription invalid (410/403 during warm-up)')
-
-            // Still return the device object (it was deleted, but return original for client)
-            // Client should handle deletion and retry registration
-            return registeredDevice
-          }
-        } catch (warmUpError) {
-          const errorMessage = warmUpError instanceof Error ? warmUpError.message : 'Unknown error'
-
-          // Special handling for encryption key errors
-          // If the private key is encrypted but ENCRYPTION_KEY is missing, we cannot send push notifications
-          // In this case, mark device as ACTIVE but log a warning - push notifications will fail until ENCRYPTION_KEY is set
-          if (errorMessage.includes('ENCRYPTION_KEY') || errorMessage.includes('encrypted in database')) {
-            console.warn('[RegisterDevice] ⚠️ ENCRYPTION_KEY missing during warm-up push', {
-              error: errorMessage,
-              deviceId: registeredDevice.id,
-              note: 'Marking device as ACTIVE - will be validated on first real push. Ensure ENCRYPTION_KEY is set if using encrypted keys.'
-            })
-
-            // Mark as ACTIVE - assume the private key is already decrypted or will work
-            // NOTE: This device will fail on first push if ENCRYPTION_KEY is not set
-            // The device is marked ACTIVE to allow registration to complete, but push notifications
-            // will fail until ENCRYPTION_KEY is properly configured
-            const activatedDevice = await db
-              .update(tables.device)
-              .set({
-                status: 'ACTIVE',
-                updatedAt: new Date().toISOString(),
-              })
-              .where(eq(tables.device.id, registeredDevice.id))
-              .returning()
-
-            console.log('[RegisterDevice] ✅ Device marked as ACTIVE despite ENCRYPTION_KEY error', {
-              id: activatedDevice[0].id,
-              status: activatedDevice[0].status,
-              warning: 'Push notifications will fail until ENCRYPTION_KEY is set in environment'
-            })
-
-            // Process automations after activation
-            processSubscriptionAutomations(
-              input.appId,
-              activatedDevice[0].id,
-              db,
-              tables,
-            ).catch((error) => {
-              console.error('[Automation] Error processing subscription automations:', error)
-            })
-
-            return activatedDevice[0]
-          }
-
-          // Other errors during warm-up - log but don't fail registration
-          // Device remains PENDING - will be validated on next real push
-          console.error('[RegisterDevice] ⚠️ Error during warm-up push - device remains PENDING', {
-            error: errorMessage,
-            deviceId: registeredDevice.id
-          })
-
-          // Device stays as PENDING - will be validated later
-          return registeredDevice
-        }
+        return activatedDevice[0]
       } else {
-        // Non-WEB platform or missing keys - mark as ACTIVE immediately
-        if (registeredDevice.status !== 'ACTIVE') {
-          const activatedDevice = await db
-            .update(tables.device)
-            .set({
-              status: 'ACTIVE',
-              updatedAt: new Date().toISOString(),
-            })
-            .where(eq(tables.device.id, registeredDevice.id))
-            .returning()
-
-          return activatedDevice[0]
-        }
-
-        // Process automations
+        // For non-WEB platforms, device is already ACTIVE (set during registration)
+        // Process automations for non-WEB platforms
         processSubscriptionAutomations(
           input.appId,
           registeredDevice.id,
