@@ -83,9 +83,21 @@ export async function getProviderForApp(appId: string, platform: 'ios' | 'androi
       }
 
       // Decrypt the private key if it's encrypted
-      const vapidPrivateKey = isDataEncrypted(appData.vapidPrivateKey)
-        ? decryptSensitiveData(appData.vapidPrivateKey)
-        : appData.vapidPrivateKey
+      let vapidPrivateKey: string
+      if (isDataEncrypted(appData.vapidPrivateKey)) {
+        try {
+          vapidPrivateKey = decryptSensitiveData(appData.vapidPrivateKey)
+        } catch (decryptError) {
+          const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown decryption error'
+          // If ENCRYPTION_KEY is missing but key is encrypted, throw a more helpful error
+          if (errorMsg.includes('ENCRYPTION_KEY')) {
+            throw new Error(`Cannot decrypt VAPID private key: ${errorMsg}. Please set ENCRYPTION_KEY environment variable or ensure the key is stored unencrypted.`)
+          }
+          throw decryptError
+        }
+      } else {
+        vapidPrivateKey = appData.vapidPrivateKey
+      }
 
       // Normalize VAPID keys (remove any whitespace)
       const normalizedPublicKey = appData.vapidPublicKey.replace(/\s+/g, '')

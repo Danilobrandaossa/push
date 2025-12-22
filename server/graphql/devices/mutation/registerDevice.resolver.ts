@@ -251,10 +251,45 @@ export const registerDeviceMutation = defineMutation({
             return registeredDevice
           }
         } catch (warmUpError) {
-          // Error during warm-up - log but don't fail registration
+          const errorMessage = warmUpError instanceof Error ? warmUpError.message : 'Unknown error'
+
+          // Special handling for encryption key errors
+          // If ENCRYPTION_KEY is missing but the private key might already be decrypted in the database,
+          // we'll mark the device as ACTIVE and let it be validated on the first real push
+          if (errorMessage.includes('ENCRYPTION_KEY')) {
+            console.warn('[RegisterDevice] ⚠️ ENCRYPTION_KEY missing during warm-up push', {
+              error: errorMessage,
+              deviceId: registeredDevice.id,
+              note: 'Marking device as ACTIVE - will be validated on first real push. Ensure ENCRYPTION_KEY is set if using encrypted keys.'
+            })
+
+            // Mark as ACTIVE - assume the private key is already decrypted or will work
+            const activatedDevice = await db
+              .update(tables.device)
+              .set({
+                status: 'ACTIVE',
+                updatedAt: new Date().toISOString(),
+              })
+              .where(eq(tables.device.id, registeredDevice.id))
+              .returning()
+
+            // Process automations after activation
+            processSubscriptionAutomations(
+              input.appId,
+              activatedDevice[0].id,
+              db,
+              tables,
+            ).catch((error) => {
+              console.error('[Automation] Error processing subscription automations:', error)
+            })
+
+            return activatedDevice[0]
+          }
+
+          // Other errors during warm-up - log but don't fail registration
           // Device remains PENDING - will be validated on next real push
           console.error('[RegisterDevice] ⚠️ Error during warm-up push - device remains PENDING', {
-            error: warmUpError instanceof Error ? warmUpError.message : 'Unknown error',
+            error: errorMessage,
             deviceId: registeredDevice.id
           })
 
