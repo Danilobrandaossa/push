@@ -115,11 +115,67 @@ class WebPushProvider {
       }
 
       // Import the key properly using Node.js crypto
-      const privateKey = crypto.createPrivateKey({
-        key: privateKeyBuffer,
-        format: 'der',
-        type: 'pkcs8',
-      })
+      // Handle both PKCS#8 DER format (~118 bytes) and raw EC private key (32 bytes)
+      let privateKey: any
+
+      if (privateKeyBuffer.length === 32) {
+        // Raw EC private key (32 bytes) - construct PKCS#8 DER manually
+        // ECPrivateKey structure for prime256v1 (secp256r1)
+        // OID for prime256v1: 1.2.840.10045.3.1.7 = { 1,2,840,10045,3,1,7 }
+        const ecPrivateKeyOID = Buffer.from([0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07]) // OID for prime256v1
+
+        // ECPrivateKey: SEQUENCE { version INTEGER(1), privateKey OCTET STRING, [0] EXPLICIT ECParameters, [1] EXPLICIT BIT STRING }
+        // Simplified: SEQUENCE { version(1), privateKey OCTET STRING(32 bytes), [0] EXPLICIT { OBJECT IDENTIFIER } }
+        const version = Buffer.from([0x02, 0x01, 0x01]) // INTEGER 1
+        const privateKeyOctet = Buffer.concat([
+          Buffer.from([0x04, 0x20]), // OCTET STRING length 32
+          privateKeyBuffer
+        ])
+        const ecParameters = Buffer.concat([
+          Buffer.from([0xa0, 0x0a]), // [0] EXPLICIT tag and length
+          ecPrivateKeyOID
+        ])
+
+        const ecPrivateKey = Buffer.concat([version, privateKeyOctet, ecParameters])
+        const ecPrivateKeySeq = Buffer.concat([
+          Buffer.from([0x30, ecPrivateKey.length]), // SEQUENCE
+          ecPrivateKey
+        ])
+
+        // PKCS#8: SEQUENCE { version INTEGER, algorithm AlgorithmIdentifier, privateKey OCTET STRING }
+        const pkcs8Version = Buffer.from([0x02, 0x01, 0x00]) // INTEGER 0
+        const algorithm = Buffer.concat([
+          Buffer.from([0x30, 0x0d]), // SEQUENCE
+          Buffer.from([0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01]), // OID for ecPublicKey
+          Buffer.from([0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07]) // OID for prime256v1
+        ])
+        const privateKeyOctetString = Buffer.concat([
+          Buffer.from([0x04, ecPrivateKeySeq.length]), // OCTET STRING
+          ecPrivateKeySeq
+        ])
+
+        const pkcs8Der = Buffer.concat([
+          Buffer.from([0x30, pkcs8Version.length + algorithm.length + privateKeyOctetString.length]), // SEQUENCE
+          pkcs8Version,
+          algorithm,
+          privateKeyOctetString
+        ])
+
+        privateKey = crypto.createPrivateKey({
+          key: pkcs8Der,
+          format: 'der',
+          type: 'pkcs8',
+        })
+
+        console.log('[WebPush] Converted raw EC private key (32 bytes) to PKCS#8 DER format')
+      } else {
+        // PKCS#8 DER format (already in correct format)
+        privateKey = crypto.createPrivateKey({
+          key: privateKeyBuffer,
+          format: 'der',
+          type: 'pkcs8',
+        })
+      }
 
       // Export as PEM for jsonwebtoken
       const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }) as string
@@ -143,33 +199,17 @@ class WebPushProvider {
         'Crypto-Key': `p256ecdsa=${cleanPublicKey}`,
       }
 
-      // Log full key for debugging and validation
-      const expectedKey = 'BIJfFcoBwqS1RLu7tjMcdwIQK86T4KdRHhc6mcxFmy0yXp0DeNY8lRl0LSFp4XThozLwobq09dzEOOcSPwstI7k'
-      const keysMatch = cleanPublicKey === expectedKey
-
-      console.log('[WebPush] VAPID headers generated with full key:', {
-        publicKeyFull: cleanPublicKey, // Log full key for comparison
+      console.log('[WebPush] VAPID headers generated:', {
         publicKeyPreview: cleanPublicKey.substring(0, 50) + '...',
         publicKeyLength: cleanPublicKey.length,
-        expectedKeyLength: expectedKey.length,
-        keysMatch: keysMatch,
-        keyDifference: keysMatch ? 'NONE' : `First diff at position ${cleanPublicKey.split('').findIndex((c, i) => c !== expectedKey[i])}`,
         wasPublicKeyNormalized: cleanPublicKey !== this.config.publicKey,
         publicKeyInAuth: headers.Authorization.includes(cleanPublicKey.substring(0, 20)),
         publicKeyInCryptoKey: headers['Crypto-Key'].includes(cleanPublicKey.substring(0, 20)),
-        publicKeyFirstChar: cleanPublicKey.charAt(0),
-        publicKeyLastChar: cleanPublicKey.charAt(cleanPublicKey.length - 1),
         tokenPreview: token.substring(0, 30) + '...',
         tokenLength: token.length,
         subject: this.config.vapidSubject,
         audience
       })
-
-      if (!keysMatch) {
-        console.warn('[WebPush] WARNING: VAPID public key does not match expected key!')
-        console.warn('[WebPush] Expected:', expectedKey)
-        console.warn('[WebPush] Actual:', cleanPublicKey)
-      }
 
       return headers
     }
