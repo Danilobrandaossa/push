@@ -20,3 +20,4 @@ BEGIN
         ALTER TYPE "public"."device_status" ADD VALUE 'PENDING';
     END IF;
 END $$;
+

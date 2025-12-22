@@ -12,3 +12,4 @@ CREATE INDEX IF NOT EXISTS "idx_device_vapid_public_key_used" ON "device"("vapid
 COMMENT ON COLUMN "device"."vapidPublicKeyUsed" IS 'Chave VAPID pública usada quando o device foi registrado. Armazenada para debug de erros 403 (VAPID mismatch).';
 
 
+
