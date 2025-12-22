@@ -124,6 +124,9 @@ export const registerDeviceMutation = defineMutation({
       console.log(`[RegisterDevice] Registering device with status ${initialStatus}`, {
         appId: input.appId,
         platform: input.platform,
+        platformType: typeof input.platform,
+        platformEquality: input.platform === 'WEB',
+        initialStatus,
         tokenPreview: cleanToken.substring(0, 50) + '...',
         hasWebPushKeys: !!(input.webPushP256dh && input.webPushAuth),
         vapidPublicKeyUsed: vapidPublicKeyUsed ? vapidPublicKeyUsed.substring(0, 30) + '...' : 'null',
@@ -165,9 +168,16 @@ export const registerDeviceMutation = defineMutation({
       console.log('[RegisterDevice] Device registered successfully', {
         id: registeredDevice.id,
         status: registeredDevice.status,
+        expectedStatus: initialStatus,
+        statusMatch: registeredDevice.status === initialStatus,
         platform: registeredDevice.platform,
         appId: registeredDevice.appId
       })
+
+      // Sanity check: ensure status matches what we set
+      if (registeredDevice.status !== initialStatus) {
+        console.warn(`[RegisterDevice] ⚠️ Status mismatch! Expected ${initialStatus}, got ${registeredDevice.status}`)
+      }
 
       // 🔒 MOBILE-SAFE: Warm-up push for WEB platform devices
       // Validate subscription before marking as ACTIVE - prevents "natimortos"
