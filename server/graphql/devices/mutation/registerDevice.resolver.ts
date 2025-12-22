@@ -264,6 +264,9 @@ export const registerDeviceMutation = defineMutation({
             })
 
             // Mark as ACTIVE - assume the private key is already decrypted or will work
+            // NOTE: This device will fail on first push if ENCRYPTION_KEY is not set
+            // The device is marked ACTIVE to allow registration to complete, but push notifications
+            // will fail until ENCRYPTION_KEY is properly configured
             const activatedDevice = await db
               .update(tables.device)
               .set({
@@ -272,6 +275,12 @@ export const registerDeviceMutation = defineMutation({
               })
               .where(eq(tables.device.id, registeredDevice.id))
               .returning()
+
+            console.log('[RegisterDevice] ✅ Device marked as ACTIVE despite ENCRYPTION_KEY error', {
+              id: activatedDevice[0].id,
+              status: activatedDevice[0].status,
+              warning: 'Push notifications will fail until ENCRYPTION_KEY is set in environment'
+            })
 
             // Process automations after activation
             processSubscriptionAutomations(
