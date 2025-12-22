@@ -119,55 +119,33 @@ class WebPushProvider {
       let privateKey: any
 
       if (privateKeyBuffer.length === 32) {
-        // Raw EC private key (32 bytes) - construct PKCS#8 DER manually
-        // ECPrivateKey structure for prime256v1 (secp256r1)
-        // OID for prime256v1: 1.2.840.10045.3.1.7 = { 1,2,840,10045,3,1,7 }
-        const ecPrivateKeyOID = Buffer.from([0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07]) // OID for prime256v1
+        // Raw EC private key (32 bytes) - convert to JWK format using the public key
+        // Extract x and y coordinates from the public key (raw EC point: 0x04 + 32 bytes x + 32 bytes y)
+        const publicKeyBuffer = Buffer.from(this.config.publicKey, 'base64url')
 
-        // ECPrivateKey: SEQUENCE { version INTEGER(1), privateKey OCTET STRING, [0] EXPLICIT ECParameters, [1] EXPLICIT BIT STRING }
-        // Simplified: SEQUENCE { version(1), privateKey OCTET STRING(32 bytes), [0] EXPLICIT { OBJECT IDENTIFIER } }
-        const version = Buffer.from([0x02, 0x01, 0x01]) // INTEGER 1
-        const privateKeyOctet = Buffer.concat([
-          Buffer.from([0x04, 0x20]), // OCTET STRING length 32
-          privateKeyBuffer
-        ])
-        const ecParameters = Buffer.concat([
-          Buffer.from([0xa0, 0x0a]), // [0] EXPLICIT tag and length
-          ecPrivateKeyOID
-        ])
+        if (publicKeyBuffer.length !== 65 || publicKeyBuffer[0] !== 0x04) {
+          throw new Error('Invalid VAPID public key format. Expected 65 bytes starting with 0x04 (uncompressed EC point)')
+        }
 
-        const ecPrivateKey = Buffer.concat([version, privateKeyOctet, ecParameters])
-        const ecPrivateKeySeq = Buffer.concat([
-          Buffer.from([0x30, ecPrivateKey.length]), // SEQUENCE
-          ecPrivateKey
-        ])
+        const x = publicKeyBuffer.slice(1, 33) // 32 bytes x coordinate
+        const y = publicKeyBuffer.slice(33, 65) // 32 bytes y coordinate
 
-        // PKCS#8: SEQUENCE { version INTEGER, algorithm AlgorithmIdentifier, privateKey OCTET STRING }
-        const pkcs8Version = Buffer.from([0x02, 0x01, 0x00]) // INTEGER 0
-        const algorithm = Buffer.concat([
-          Buffer.from([0x30, 0x0d]), // SEQUENCE
-          Buffer.from([0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01]), // OID for ecPublicKey
-          Buffer.from([0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07]) // OID for prime256v1
-        ])
-        const privateKeyOctetString = Buffer.concat([
-          Buffer.from([0x04, ecPrivateKeySeq.length]), // OCTET STRING
-          ecPrivateKeySeq
-        ])
+        // Create JWK with both private and public key components
+        const jwk = {
+          kty: 'EC',
+          crv: 'P-256', // prime256v1
+          d: privateKeyBuffer.toString('base64url'), // private key (raw)
+          x: x.toString('base64url'), // public key x coordinate
+          y: y.toString('base64url'), // public key y coordinate
+        }
 
-        const pkcs8Der = Buffer.concat([
-          Buffer.from([0x30, pkcs8Version.length + algorithm.length + privateKeyOctetString.length]), // SEQUENCE
-          pkcs8Version,
-          algorithm,
-          privateKeyOctetString
-        ])
-
+        // Create key from JWK
         privateKey = crypto.createPrivateKey({
-          key: pkcs8Der,
-          format: 'der',
-          type: 'pkcs8',
+          key: jwk,
+          format: 'jwk',
         })
 
-        console.log('[WebPush] Converted raw EC private key (32 bytes) to PKCS#8 DER format')
+        console.log('[WebPush] Converted raw EC private key (32 bytes) to KeyObject using JWK format')
       } else {
         // PKCS#8 DER format (already in correct format)
         privateKey = crypto.createPrivateKey({
