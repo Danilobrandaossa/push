@@ -179,6 +179,7 @@ class WebPushProvider {
 
       console.log('[WebPush] VAPID headers generated:', {
         publicKeyPreview: cleanPublicKey.substring(0, 50) + '...',
+        publicKeyFull: cleanPublicKey, // Log FULL key for comparison with frontend/subscription
         publicKeyLength: cleanPublicKey.length,
         wasPublicKeyNormalized: cleanPublicKey !== this.config.publicKey,
         publicKeyInAuth: headers.Authorization.includes(cleanPublicKey.substring(0, 20)),
@@ -186,7 +187,8 @@ class WebPushProvider {
         tokenPreview: token.substring(0, 30) + '...',
         tokenLength: token.length,
         subject: this.config.vapidSubject,
-        audience
+        audience,
+        note: 'Compare publicKeyFull with the VAPID key used when subscription was created. They MUST match exactly.'
       })
 
       return headers

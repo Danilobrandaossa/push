@@ -130,6 +130,10 @@ export const registerDeviceMutation = defineMutation({
         tokenPreview: cleanToken.substring(0, 50) + '...',
         hasWebPushKeys: !!(input.webPushP256dh && input.webPushAuth),
         vapidPublicKeyUsed: vapidPublicKeyUsed ? vapidPublicKeyUsed.substring(0, 30) + '...' : 'null',
+        vapidPublicKeyUsedFull: vapidPublicKeyUsed || 'null', // Log FULL key for comparison with frontend
+        vapidPublicKeyLength: vapidPublicKeyUsed ? vapidPublicKeyUsed.length : 0,
+        expectedKeyStart: vapidPublicKeyUsed ? vapidPublicKeyUsed.substring(0, 20) : 'null',
+        expectedKeyEnd: vapidPublicKeyUsed ? vapidPublicKeyUsed.substring(vapidPublicKeyUsed.length - 20) : 'null',
         willDoWarmUpPush: input.platform === 'WEB'
       })
 
@@ -184,8 +188,30 @@ export const registerDeviceMutation = defineMutation({
       if (input.platform === 'WEB' && input.webPushP256dh && input.webPushAuth) {
         console.log('[RegisterDevice] 🔒 MOBILE-SAFE: Sending warm-up push to validate subscription...')
 
+        // Log VAPID key comparison for debugging 403 errors
+        console.log('[RegisterDevice] 🔍 VAPID Key Comparison (for debugging 403 errors):', {
+          vapidPublicKeyUsedInDB: vapidPublicKeyUsed || 'null',
+          vapidPublicKeyUsedLength: vapidPublicKeyUsed ? vapidPublicKeyUsed.length : 0,
+          vapidPublicKeyUsedStart: vapidPublicKeyUsed ? vapidPublicKeyUsed.substring(0, 30) + '...' : 'null',
+          vapidPublicKeyUsedEnd: vapidPublicKeyUsed ? '...' + vapidPublicKeyUsed.substring(vapidPublicKeyUsed.length - 30) : 'null',
+          deviceId: registeredDevice.id,
+          note: 'This is the VAPID public key that was stored when device was registered. Compare with frontend logs to verify if subscription was created with this key.'
+        })
+
         try {
           const provider = await getProviderForApp(input.appId, 'web')
+
+          // Log the VAPID public key that will be used for sending
+          const providerConfig = (provider as any).config
+          console.log('[RegisterDevice] 🔍 VAPID Key that will be used for sending push:', {
+            publicKeyFull: providerConfig?.publicKey || 'unknown',
+            publicKeyLength: providerConfig?.publicKey ? providerConfig.publicKey.length : 0,
+            publicKeyStart: providerConfig?.publicKey ? providerConfig.publicKey.substring(0, 30) + '...' : 'unknown',
+            publicKeyEnd: providerConfig?.publicKey ? '...' + providerConfig.publicKey.substring(providerConfig.publicKey.length - 30) : 'unknown',
+            matchesStoredKey: providerConfig?.publicKey === vapidPublicKeyUsed,
+            deviceId: registeredDevice.id,
+            note: 'Compare this with vapidPublicKeyUsedInDB above. They MUST match exactly, or 403 error will occur.'
+          })
           const warmUpMessage = (provider as any).convertNotificationPayload(
             {
               title: '', // Empty title = silent push (warm-up)
