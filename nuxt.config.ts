@@ -34,6 +34,17 @@ export default defineNuxtConfig({
       tasks: true,
     },
     modules: ['nitro-graphql'],
+    // Configuração de CORS para permitir requisições de outros dispositivos
+    routeRules: {
+      '/api/**': {
+        cors: true,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+        },
+      },
+    },
     graphql: {
       framework: 'graphql-yoga',
       codegen: {
@@ -51,5 +62,9 @@ export default defineNuxtConfig({
         },
       },
     } as NitroGraphQLOptions,
+  },
+  devServer: {
+    host: '0.0.0.0', // Permite acesso de outros dispositivos na rede local
+    port: 3000,
   },
 })

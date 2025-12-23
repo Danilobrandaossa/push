@@ -95,3 +95,4 @@ updateVapidKeys(privateKey)
     process.exit(1)
   })
 
+

@@ -152,35 +152,11 @@ export const notificationMutations = defineMutation({
                   const keysMatch = currentVapidPublicKey === deviceVapidKey
 
                   if (!keysMatch) {
-                    console.warn(`[Notification] ⚠️ PRE-VALIDATION FAILED: Device ${device.id} VAPID mismatch detected`)
+                    console.warn(`[Notification] ⚠️ PRE-VALIDATION WARNING: Device ${device.id} VAPID key mismatch detected`)
                     console.warn(`[Notification] ⚠️   - Key at registration: ${deviceVapidKey.substring(0, 50)}... (length: ${deviceVapidKey.length})`)
                     console.warn(`[Notification] ⚠️   - Current key in app: ${currentVapidPublicKey.substring(0, 50)}... (length: ${currentVapidPublicKey.length})`)
-                    console.warn(`[Notification] ⚠️   - This device will fail with 403 - marking as EXPIRED and skipping`)
-
-                    // Mark as EXPIRED before attempting to send (prevents wasted API calls and 403 errors)
-                    try {
-                      await db
-                        .update(tables.device)
-                        .set({
-                          status: 'EXPIRED',
-                          updatedAt: new Date().toISOString(),
-                        })
-                        .where(eq(tables.device.id, device.id))
-                      console.log(`[Notification] ✅ Device ${device.id} pre-validated and marked as EXPIRED - skipping send`)
-
-                      totalFailed++
-                      deliveryLogs.push({
-                        notificationId: newNotification[0].id,
-                        deviceId: device.id,
-                        status: 'FAILED' as const,
-                        errorMessage: 'VAPID key mismatch: Device registered with different VAPID key. Device needs to re-subscribe with current VAPID keys.',
-                        sentAt: null,
-                      })
-                      continue // Skip this device, don't attempt to send
-                    } catch (updateError) {
-                      console.error(`[Notification] Failed to mark device ${device.id} as expired in pre-validation:`, updateError)
-                      // Continue to attempt send (will fail with 403, then be marked as expired)
-                    }
+                    console.warn(`[Notification] ⚠️   - Will attempt to send anyway (device NOT marked as EXPIRED for testing purposes)`)
+                    // NOT marking as EXPIRED - continue to attempt send for testing
                   } else {
                     // Even if public keys match, the subscription might still fail if:
                     // 1. The private key being used doesn't match the private key that created the subscription
@@ -359,20 +335,9 @@ export const notificationMutations = defineMutation({
                     console.warn(`[Notification] ⚠️   - O FCM valida o JWT assinado com a chave privada contra a chave pública original`)
                     console.warn(`[Notification] ⚠️   - Se o PAR de chaves não corresponder ao original, retorna 403`)
                     console.warn(`[Notification] ⚠️   - A única solução é criar uma NOVA subscription (novo endpoint) com o PAR de chaves correto`)
+                    console.warn(`[Notification] ⚠️   - Device NOT marked as EXPIRED (for testing purposes - will remain ACTIVE)`)
 
-                    // Mark device as EXPIRED to force client to create new subscription
-                    try {
-                      await db
-                        .update(tables.device)
-                        .set({
-                          status: 'EXPIRED',
-                          updatedAt: new Date().toISOString(),
-                        })
-                        .where(eq(tables.device.id, device.id))
-                      console.log(`[Notification] Device ${device.id} marked as EXPIRED due to VAPID mismatch - client will need to create new subscription`)
-                    } catch (updateError) {
-                      console.error(`[Notification] Failed to mark device ${device.id} as expired:`, updateError)
-                    }
+                    // NOT marking as EXPIRED - device will remain ACTIVE to allow testing and debugging
                     // try {
                     //   await db
                     //     .update(tables.device)

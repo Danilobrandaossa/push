@@ -13,3 +13,4 @@ COMMENT ON COLUMN "device"."vapidPublicKeyUsed" IS 'Chave VAPID pública usada q
 
 
 
+
