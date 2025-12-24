@@ -1,4 +1,4 @@
-import { and, eq, inArray, lte } from 'drizzle-orm'
+import { and, eq, inArray, lte, or } from 'drizzle-orm'
 import { getDatabase } from '../database/connection'
 import { device, notification } from '../database/schema'
 import { addSendNotificationJob } from '../queues/notification.queue'
@@ -12,14 +12,21 @@ async function processScheduledNotifications() {
   const db = getDatabase()
 
   try {
-    // Find notifications that are scheduled and due
+    // Find notifications that are scheduled and due, OR pending notifications
     const dueNotifications = await db
       .select()
       .from(notification)
       .where(
         and(
-          eq(notification.status, 'SCHEDULED'),
-          lte(notification.scheduledAt, new Date().toISOString()),
+          inArray(notification.status, ['SCHEDULED', 'PENDING']),
+          // For SCHEDULED: must be due, for PENDING: no time restriction
+          or(
+            and(
+              eq(notification.status, 'SCHEDULED'),
+              lte(notification.scheduledAt, new Date().toISOString())
+            ),
+            eq(notification.status, 'PENDING')
+          )
         ),
       )
       .limit(BATCH_SIZE)
@@ -28,15 +35,18 @@ async function processScheduledNotifications() {
       return
     }
 
-    console.log(`[Scheduler] Found ${dueNotifications.length} scheduled notifications to process`)
+    console.log(`[Scheduler] Found ${dueNotifications.length} notifications to process (SCHEDULED or PENDING)`)
 
     for (const notif of dueNotifications) {
       try {
-        // Mark as PENDING to prevent duplicate processing
-        await db
-          .update(notification)
-          .set({ status: 'PENDING', updatedAt: new Date().toISOString() })
-          .where(eq(notification.id, notif.id))
+        // If SCHEDULED, mark as PENDING to prevent duplicate processing
+        // If already PENDING, keep as PENDING
+        if (notif.status === 'SCHEDULED') {
+          await db
+            .update(notification)
+            .set({ status: 'PENDING', updatedAt: new Date().toISOString() })
+            .where(eq(notification.id, notif.id))
+        }
 
         // Get target devices
         let targetDevices = []
