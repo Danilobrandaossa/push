@@ -927,12 +927,27 @@ const daysOfWeekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
                   </div>
 
                   <div>
-                    <Label :for="`edit-imageUrl-${index}`">Image URL</Label>
+                    <Label :for="`edit-icon-${index}`">Ícone (Icon URL)</Label>
+                    <Input
+                      :id="`edit-icon-${index}`"
+                      v-model="template.icon"
+                      placeholder="https://example.com/icon.png"
+                    />
+                    <p class="text-xs text-muted-foreground mt-1">
+                      URL do ícone que aparece na notificação (substitui o ícone padrão do navegador)
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label :for="`edit-imageUrl-${index}`">Imagem Grande (Image URL)</Label>
                     <Input
                       :id="`edit-imageUrl-${index}`"
                       v-model="template.imageUrl"
                       placeholder="https://example.com/image.png"
                     />
+                    <p class="text-xs text-muted-foreground mt-1">
+                      URL da imagem grande que aparece dentro da notificação (opcional)
+                    </p>
                   </div>
 
                   <div>
