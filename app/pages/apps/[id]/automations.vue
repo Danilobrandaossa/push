@@ -43,6 +43,7 @@ const formData = ref({
       title: '',
       body: '',
       data: '' as any,
+      icon: '',
       imageUrl: '',
       clickAction: '',
       sound: 'default',
@@ -53,6 +54,7 @@ const formData = ref({
     title: string
     body: string
     data: any | string // Pode ser objeto JSON ou string para edição
+    icon: string
     imageUrl: string
     clickAction: string
     sound: string
@@ -102,6 +104,7 @@ function openEditDialog(automation: any) {
       title: '',
       body: '',
       data: '',
+      icon: '',
       imageUrl: '',
       clickAction: '',
       sound: 'default',
@@ -137,6 +140,7 @@ function resetForm() {
         title: '',
         body: '',
         data: '',
+        icon: '',
         imageUrl: '',
         clickAction: '',
         sound: 'default',
@@ -158,6 +162,7 @@ function addTemplate() {
     title: '',
     body: '',
     data: null,
+    icon: '',
     imageUrl: '',
     clickAction: '',
     sound: 'default',
@@ -241,7 +246,8 @@ async function handleCreate() {
           title: t.title,
           body: t.body,
           data: parsedData,
-          imageUrl: t.imageUrl?.trim() || undefined,
+          icon: t.icon?.trim() || undefined, // Ícone da notificação
+          imageUrl: t.imageUrl?.trim() || undefined, // Imagem grande
           clickAction: t.clickAction?.trim() || undefined,
           sound: t.sound?.trim() || 'default',
           badge: t.badge || undefined,
@@ -324,7 +330,8 @@ async function handleUpdate() {
           title: t.title,
           body: t.body,
           data: parsedData,
-          imageUrl: t.imageUrl?.trim() || undefined,
+          icon: t.icon?.trim() || undefined, // Ícone da notificação
+          imageUrl: t.imageUrl?.trim() || undefined, // Imagem grande
           clickAction: t.clickAction?.trim() || undefined,
           sound: t.sound?.trim() || 'default',
           badge: t.badge || undefined,
@@ -672,12 +679,27 @@ const daysOfWeekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
                   </div>
 
                   <div>
-                    <Label :for="`imageUrl-${index}`">Image URL</Label>
+                    <Label :for="`icon-${index}`">Ícone (Icon URL)</Label>
+                    <Input
+                      :id="`icon-${index}`"
+                      v-model="template.icon"
+                      placeholder="https://example.com/icon.png"
+                    />
+                    <p class="text-xs text-muted-foreground mt-1">
+                      URL do ícone que aparece na notificação (substitui o ícone padrão do navegador)
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label :for="`imageUrl-${index}`">Imagem Grande (Image URL)</Label>
                     <Input
                       :id="`imageUrl-${index}`"
                       v-model="template.imageUrl"
                       placeholder="https://example.com/image.png"
                     />
+                    <p class="text-xs text-muted-foreground mt-1">
+                      URL da imagem grande que aparece dentro da notificação (opcional)
+                    </p>
                   </div>
 
                   <div>

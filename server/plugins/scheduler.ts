@@ -109,7 +109,9 @@ async function processScheduledNotifications() {
               badge: notif.badge || undefined,
               sound: notif.sound || undefined,
               clickAction: notif.clickAction || undefined,
-              imageUrl: notif.imageUrl || undefined,
+              icon: notif.icon || notif.imageUrl || undefined, // Usar icon primeiro, fallback para imageUrl
+              image: notif.image || notif.imageUrl || undefined, // image é para imagem grande
+              imageUrl: notif.imageUrl || undefined, // Manter para compatibilidade
             },
           })
           }

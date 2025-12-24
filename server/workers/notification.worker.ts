@@ -18,6 +18,7 @@ async function processSendNotification(job: Job<SendNotificationJobData>) {
     const provider = await getProviderForApp(appId, platform)
 
     // Build notification payload
+    // Para Web Push: icon é o ícone da notificação, image é imagem grande
     const notificationPayload = {
       title: payload.title,
       body: payload.body,
@@ -25,7 +26,9 @@ async function processSendNotification(job: Job<SendNotificationJobData>) {
       badge: payload.badge,
       sound: payload.sound,
       clickAction: payload.clickAction,
-      imageUrl: payload.imageUrl,
+      icon: payload.icon || payload.imageUrl || undefined, // Usar icon primeiro, fallback para imageUrl
+      image: payload.image || payload.imageUrl || undefined, // image é para imagem grande
+      imageUrl: payload.imageUrl || undefined, // Manter para compatibilidade
     }
 
     // Build message based on platform

@@ -68,7 +68,7 @@ export function calculateNextRunAt(automation: AutomationData): string | undefin
     // Verificar se hoje é um dia válido e o horário ainda não passou
     const todayTime = new Date(now)
     todayTime.setHours(hours, minutes, 0, 0)
-    
+
     if (validDays.includes(today) && todayTime > now) {
       // Hoje é válido e o horário ainda não passou
       return todayTime.toISOString()
@@ -176,6 +176,7 @@ export async function processSubscriptionAutomations(
       }
 
       // Criar notificação
+      // Para Web Push: icon é o ícone da notificação, imageUrl é imagem grande
       await db
         .insert(tables.notification)
         .values({
@@ -184,7 +185,8 @@ export async function processSubscriptionAutomations(
           title: template.title,
           body: template.body,
           data: template.data,
-          imageUrl: template.imageUrl,
+          icon: template.icon || template.imageUrl || undefined, // Usar icon primeiro, fallback para imageUrl
+          imageUrl: template.imageUrl || undefined, // Imagem grande dentro da notificação
           clickAction: template.clickAction,
           sound: template.sound,
           badge: template.badge,

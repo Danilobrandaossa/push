@@ -229,6 +229,7 @@ export const CreateAutomationDocument = /*#__PURE__*/ `
       title
       body
       data
+      icon
       imageUrl
       clickAction
       sound
@@ -259,6 +260,7 @@ export const UpdateAutomationDocument = /*#__PURE__*/ `
       title
       body
       data
+      icon
       imageUrl
       clickAction
       sound
@@ -302,6 +304,7 @@ export const AutomationsDocument = /*#__PURE__*/ `
       title
       body
       data
+      icon
       imageUrl
       clickAction
       sound
@@ -332,6 +335,7 @@ export const AutomationDocument = /*#__PURE__*/ `
       title
       body
       data
+      icon
       imageUrl
       clickAction
       sound

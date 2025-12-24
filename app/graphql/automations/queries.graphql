@@ -10,6 +10,7 @@ query automations($appId: ID) {
       title
       body
       data
+      icon
       imageUrl
       clickAction
       sound
@@ -39,6 +40,7 @@ query automation($id: ID!) {
       title
       body
       data
+      icon
       imageUrl
       clickAction
       sound

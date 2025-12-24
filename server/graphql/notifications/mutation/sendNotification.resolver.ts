@@ -16,7 +16,8 @@ export const notificationMutations = defineMutation({
           title: input.title,
           body: input.body,
           data: input.data,
-          imageUrl: input.imageUrl,
+          icon: input.icon || input.imageUrl || undefined, // Usar icon primeiro, fallback para imageUrl
+          imageUrl: input.imageUrl || undefined,
           clickAction: input.clickAction,
           sound: input.sound,
           badge: input.badge,
@@ -168,6 +169,7 @@ export const notificationMutations = defineMutation({
                 }
 
                 // Build notification payload
+                // Para Web Push: icon é o ícone da notificação, image é imagem grande
                 const notificationPayload = {
                   title: input.title,
                   body: input.body,
@@ -175,6 +177,9 @@ export const notificationMutations = defineMutation({
                   badge: input.badge,
                   sound: input.sound,
                   clickAction: input.clickAction,
+                  icon: input.icon || input.imageUrl || undefined, // Usar icon primeiro, fallback para imageUrl
+                  image: input.image || input.imageUrl || undefined, // image é para imagem grande
+                  imageUrl: input.imageUrl || undefined, // Manter para compatibilidade
                 }
 
                 // WebPush requires subscription object with keys
