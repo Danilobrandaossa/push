@@ -36,6 +36,27 @@
       "when": 1737056200000,
       "tag": "0004_update_automation_multiple_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1737056300000,
+      "tag": "0005_add_vapid_public_key_used_to_device",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1737056400000,
+      "tag": "0006_add_pending_to_device_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1737056500000,
+      "tag": "0007_add_unique_token_constraint",
+      "breakpoints": true
     }
   ]
 }

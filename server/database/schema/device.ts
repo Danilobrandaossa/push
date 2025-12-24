@@ -24,7 +24,10 @@ export const device = pgTable('device', {
   createdAt: customTimestamp().defaultNow().notNull(),
   updatedAt: customTimestamp().defaultNow().notNull(),
 }, table => ({
+  // For WEB platform: endpoint (token) is globally unique
+  // For other platforms: composite key with appId, token, userId
   uniqueAppTokenUser: unique().on(table.appId, table.token, table.userId),
+  uniqueToken: unique().on(table.token), // Endpoint is globally unique for Web Push
 }))
 
 export const deviceRelations = relations(device, ({ one, many }) => ({

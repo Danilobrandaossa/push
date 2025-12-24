@@ -137,6 +137,12 @@ export const registerDeviceMutation = defineMutation({
         willDoWarmUpPush: input.platform === 'WEB'
       })
 
+      // For WEB platform, endpoint (token) is globally unique - use it as the primary key
+      // For other platforms, use the existing composite key
+      const conflictTarget = input.platform === 'WEB'
+        ? [tables.device.token] // Endpoint is globally unique for Web Push
+        : [tables.device.appId, tables.device.token, tables.device.userId] // Composite key for other platforms
+
       const device = await db
         .insert(tables.device)
         .values({
@@ -153,8 +159,9 @@ export const registerDeviceMutation = defineMutation({
           lastSeenAt: new Date().toISOString(),
         })
         .onConflictDoUpdate({
-          target: [tables.device.appId, tables.device.token, tables.device.userId],
+          target: conflictTarget,
           set: {
+            appId: input.appId, // Update appId in case it changed (shouldn't happen, but safe)
             category: input.category,
             metadata: input.metadata,
             webPushP256dh: input.webPushP256dh,
