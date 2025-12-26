@@ -21,8 +21,8 @@ async function processScheduledNotifications() {
           inArray(notification.status, ['SCHEDULED', 'PENDING']),
           // For SCHEDULED: must be due, for PENDING: no time restriction
           or(
-            and(
-              eq(notification.status, 'SCHEDULED'),
+        and(
+          eq(notification.status, 'SCHEDULED'),
               lte(notification.scheduledAt, new Date().toISOString())
             ),
             eq(notification.status, 'PENDING')
@@ -42,10 +42,10 @@ async function processScheduledNotifications() {
         // If SCHEDULED, mark as PENDING to prevent duplicate processing
         // If already PENDING, keep as PENDING
         if (notif.status === 'SCHEDULED') {
-          await db
-            .update(notification)
-            .set({ status: 'PENDING', updatedAt: new Date().toISOString() })
-            .where(eq(notification.id, notif.id))
+        await db
+          .update(notification)
+          .set({ status: 'PENDING', updatedAt: new Date().toISOString() })
+          .where(eq(notification.id, notif.id))
         }
 
         // Get target devices

@@ -22,6 +22,7 @@ type Notification {
   body: String!
   data: JSON
   imageUrl: String
+  icon: String
   clickAction: String
   sound: String
   badge: Int
@@ -74,6 +75,7 @@ input SendNotificationInput {
   body: String!
   data: JSON
   imageUrl: String
+  icon: String
   clickAction: String
   sound: String
   badge: Int

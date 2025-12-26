@@ -140,6 +140,11 @@ async function sendNotification() {
       appId: form.value.appId,
       title: form.value.title,
       body: form.value.body,
+      icon: form.value.icon || undefined,
+      imageUrl: form.value.image || undefined,
+      clickAction: form.value.clickAction || undefined,
+      sound: form.value.sound || undefined,
+      badge: form.value.badge || undefined,
       data: customData.value ? JSON.parse(customData.value) : undefined,
       targetDevices: targetType.value === 'devices'
         ? deviceIds.value.split('\n').filter(id => id.trim())

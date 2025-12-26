@@ -490,11 +490,26 @@ class WebPushProvider {
       image: payload.image,
       tag: payload.clickAction,
       data: {
-        ...payload.data,
-        // Add tracking IDs for service worker
+        // Only include essential tracking data, exclude ALL URLs to prevent them from showing in notification
         nitroping_notification_id: notificationId,
         nitroping_device_id: deviceId,
         clickAction: payload.clickAction,
+        // Include custom data but filter out ALL URLs and URL-like values
+        ...(payload.data ? Object.fromEntries(
+          Object.entries(payload.data).filter(([key, value]) => {
+            // Filter out any key that contains 'url'
+            if (key.toLowerCase().includes('url') || 
+                key.toLowerCase().includes('imageurl') ||
+                key.toLowerCase().includes('iconurl')) {
+              return false;
+            }
+            // Filter out any value that looks like a URL
+            if (typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'))) {
+              return false;
+            }
+            return true;
+          })
+        ) : {}),
       },
       timestamp: Date.now(),
       requireInteraction: false,

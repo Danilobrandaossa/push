@@ -9,6 +9,7 @@ mutation sendNotification($input: SendNotificationInput!) {
     sound
     clickAction
     imageUrl
+    icon
     targetDevices
     platforms
     scheduledAt
