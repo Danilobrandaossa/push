@@ -452,6 +452,7 @@ export const SendNotificationDocument = /*#__PURE__*/ `
     sound
     clickAction
     imageUrl
+    icon
     targetDevices
     platforms
     scheduledAt

@@ -26,10 +26,41 @@ self.addEventListener('push', (event) => {
         }
     }
 
-    // Extract icon from payload - WebPushProvider puts it directly in payload.icon
-    const icon = payload.icon || '/favicon.ico';
+    // FORCE custom icon - Chrome Android requires absolute URL
+    // Always use the custom icon, don't rely on payload
+    const CUSTOM_ICON = 'https://amucc.com.br/wp-content/uploads/2025/12/ca900d3cae9adaad08cc25a3dcc4e5a5.jpg';
+    
+    // Extract icon from payload - but we'll override it with custom icon
+    let icon = payload.icon || payload.data?.icon || payload.notification?.icon;
+    
+    // ALWAYS use custom icon if it's a valid URL, otherwise fallback to custom
+    if (icon && icon.startsWith('http') && icon.includes('amucc.com.br')) {
+        // Use the custom icon from payload if it's the amucc icon
+        icon = icon;
+    } else {
+        // Force custom icon
+        icon = CUSTOM_ICON;
+    }
+    
+    console.log('[SW] Icon resolved (FORCED):', icon);
+    
     // Extract image from payload
-    const image = payload.image;
+    const image = payload.image || payload.data?.image || payload.notification?.image;
+    
+    // Clean title - AGGRESSIVELY remove domain names that might be appended
+    let cleanTitle = payload.title || 'Notification';
+    // Remove domain names from title (like "amucc.com.br" or "amucc.co...")
+    // Chrome Android adds domain after title, so we need to be aggressive
+    cleanTitle = cleanTitle
+        .replace(/\s*amucc\.(com|co)[^\s]*/gi, '') // Remove "amucc.com" or "amucc.co..."
+        .replace(/\s+[a-zA-Z0-9-]+\.(com|br|net|org|io)[^\s]*/gi, '') // Remove any domain names
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
+    
+    // If title is empty after cleaning, use a default
+    if (!cleanTitle || cleanTitle.length === 0) {
+        cleanTitle = 'Notification';
+    }
     
     // Clean body - remove any URLs that might appear as text
     let cleanBody = payload.body || 'You have a new message';
@@ -77,15 +108,22 @@ self.addEventListener('push', (event) => {
     // Get clickAction/url for navigation
     const clickUrl = payload.data?.clickAction || payload.clickAction || '/';
     
-    // Ensure icon is a valid URL (not empty, not just a path if it's a full URL)
-    const finalIcon = icon && icon !== '/favicon.ico' && icon.startsWith('http') ? icon : (icon || '/favicon.ico');
+    // FORCE absolute URL for icon (Chrome Android requirement)
+    // Always use the custom icon URL
+    let finalIcon = CUSTOM_ICON;
+    if (icon && icon.startsWith('http') && icon.includes('amucc.com.br')) {
+        finalIcon = icon; // Use custom icon if valid
+    }
     
-    const options = {
+    // Badge should also use custom icon
+    let finalBadge = finalIcon; // Always use same icon as notification icon
+
+  const options = {
         body: cleanBody,
-        icon: finalIcon, // Use icon from payload directly
-        badge: payload.badge || finalIcon, // Use same icon for badge
+        icon: finalIcon, // Must be absolute URL for Chrome
+        badge: finalBadge, // Must be absolute URL for Chrome
         image: image,
-        data: {
+    data: {
             ...cleanData,
             url: clickUrl,
         },
@@ -98,17 +136,18 @@ self.addEventListener('push', (event) => {
     };
 
     console.log('[SW] Notification options:', {
-        title: payload.title,
+        title: cleanTitle,
+        originalTitle: payload.title,
         icon: finalIcon,
-        originalIcon: icon,
+        badge: finalBadge,
         hasImage: !!image,
         bodyPreview: cleanBody.substring(0, 50),
         originalBody: payload.body?.substring(0, 50),
         cleanDataKeys: Object.keys(cleanData),
     });
 
-    event.waitUntil(
-        self.registration.showNotification(payload.title || 'Notification', options)
+  event.waitUntil(
+        self.registration.showNotification(cleanTitle, options)
     );
 });
 
