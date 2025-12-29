@@ -17,7 +17,16 @@ export const appFieldsResolver = defineField({
         try {
           if (isDataEncrypted(fcmServerKey)) {
             if (process.env.ENCRYPTION_KEY) {
-              return decryptSensitiveData(fcmServerKey)
+              try {
+                return decryptSensitiveData(fcmServerKey)
+              } catch (decryptError) {
+                // If decryption fails, log warning and return null instead of breaking the query
+                const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown error'
+                console.warn('[App fcmServiceAccount Field] Failed to decrypt FCM service account:', errorMsg)
+                console.warn('[App fcmServiceAccount Field] This may happen if ENCRYPTION_KEY changed or data is corrupted')
+                console.warn('[App fcmServiceAccount Field] Returning null - FCM service account will need to be reconfigured')
+                return null // Return null instead of encrypted value to avoid breaking queries
+              }
             } else {
               // No ENCRYPTION_KEY - assume key is unencrypted despite format
               console.warn('[App fcmServiceAccount Field] ENCRYPTION_KEY not set - returning FCM key as-is')
@@ -26,8 +35,10 @@ export const appFieldsResolver = defineField({
           }
           return fcmServerKey
         } catch (error) {
-          console.error('[App fcmServiceAccount Field] Error decrypting:', error)
-          return fcmServerKey // Return encrypted value if decryption fails
+          // Catch any other unexpected errors
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+          console.error('[App fcmServiceAccount Field] Unexpected error:', errorMsg)
+          return null // Return null to prevent breaking the GraphQL query
         }
       },
     },
