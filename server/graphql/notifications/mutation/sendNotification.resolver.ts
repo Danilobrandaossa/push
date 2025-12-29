@@ -57,10 +57,11 @@ export const notificationMutations = defineMutation({
         console.log(`[Notification] Found ${targetDevices.length} target devices by token (including all statuses for testing)`)
       }
       else {
-        // All devices for app (optionally filtered by platform) - include ACTIVE and INACTIVE for testing
+        // All devices for app (optionally filtered by platform) - only ACTIVE devices
+        // EXPIRED devices are excluded as they need re-subscription
         const whereConditions = [
           eq(tables.device.appId, input.appId),
-          inArray(tables.device.status, ['ACTIVE', 'INACTIVE']) // Include inactive for testing
+          inArray(tables.device.status, ['ACTIVE']) // Only ACTIVE devices
         ]
 
         if (input.platforms && input.platforms.length > 0) {
@@ -89,6 +90,30 @@ export const notificationMutations = defineMutation({
         .update(tables.notification)
         .set({ totalTargets: targetDevices.length })
         .where(eq(tables.notification.id, newNotification[0].id))
+
+      // If no target devices, mark as SENT and return early
+      if (targetDevices.length === 0) {
+        console.log(`[Notification] No target devices found for app ${input.appId}, marking notification as SENT`)
+        await db
+          .update(tables.notification)
+          .set({
+            status: 'SENT',
+            totalTargets: 0,
+            totalSent: 0,
+            totalFailed: 0,
+            sentAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(tables.notification.id, newNotification[0].id))
+
+        const updatedNotification = await db
+          .select()
+          .from(tables.notification)
+          .where(eq(tables.notification.id, newNotification[0].id))
+          .limit(1)
+
+        return updatedNotification[0] || newNotification[0]
+      }
 
       // Send notifications to devices
       let totalSent = 0

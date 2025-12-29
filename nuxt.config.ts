@@ -65,6 +65,6 @@ export default defineNuxtConfig({
   },
   devServer: {
     host: '0.0.0.0', // Permite acesso de outros dispositivos na rede local
-    port: 3000,
+    port: 3002,
   },
 })
