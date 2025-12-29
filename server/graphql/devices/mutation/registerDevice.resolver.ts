@@ -30,6 +30,15 @@ function getClientIP(event: any): string | null {
 export const registerDeviceMutation = defineMutation({
   registerDevice: {
     resolve: async (_parent, { input }, { context }) => {
+      console.log('[RegisterDevice] Mutation called', {
+        appId: input.appId,
+        platform: input.platform,
+        hasToken: !!input.token,
+        tokenLength: input.token?.length,
+        hasP256dh: !!input.webPushP256dh,
+        hasAuth: !!input.webPushAuth,
+      })
+
       const { useDatabase, tables } = context
       const db = useDatabase()
 
