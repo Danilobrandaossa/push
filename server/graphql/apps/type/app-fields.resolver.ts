@@ -20,11 +20,22 @@ export const appFieldsResolver = defineField({
               try {
                 return decryptSensitiveData(fcmServerKey)
               } catch (decryptError) {
-                // If decryption fails, log warning and return null instead of breaking the query
-                const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown error'
-                console.warn('[App fcmServiceAccount Field] Failed to decrypt FCM service account:', errorMsg)
-                console.warn('[App fcmServiceAccount Field] This may happen if ENCRYPTION_KEY changed or data is corrupted')
-                console.warn('[App fcmServiceAccount Field] Returning null - FCM service account will need to be reconfigured')
+                // If decryption fails, log warning once per app and return null instead of breaking the query
+                // Use a simple cache to avoid logging the same error repeatedly
+                const appId = parent.id
+                const cacheKey = `fcm_decrypt_error_${appId}`
+                if (!globalThis[cacheKey as keyof typeof globalThis]) {
+                  const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown error'
+                  console.warn(`[App fcmServiceAccount Field] Failed to decrypt FCM service account for app ${appId}:`, errorMsg)
+                  console.warn('[App fcmServiceAccount Field] This may happen if ENCRYPTION_KEY changed or data is corrupted')
+                  console.warn('[App fcmServiceAccount Field] Returning null - FCM service account will need to be reconfigured')
+                  console.warn('[App fcmServiceAccount Field] (This warning will only appear once per app)')
+                  // Cache the warning for 5 minutes to avoid spam
+                  globalThis[cacheKey as keyof typeof globalThis] = true
+                  setTimeout(() => {
+                    delete (globalThis as any)[cacheKey]
+                  }, 5 * 60 * 1000) // 5 minutes
+                }
                 return null // Return null instead of encrypted value to avoid breaking queries
               }
             } else {
