@@ -150,14 +150,33 @@ export const notificationMutations = defineMutation({
                 // Skip devices that will definitely fail with 403 (VAPID mismatch)
                 if (platform === 'web' && currentVapidPublicKey && device.vapidPublicKeyUsed) {
                   const deviceVapidKey = device.vapidPublicKeyUsed.replace(/\s+/g, '')
-                  const keysMatch = currentVapidPublicKey === deviceVapidKey
+                  const currentKeyNormalized = currentVapidPublicKey.replace(/\s+/g, '')
+                  const keysMatch = deviceVapidKey === currentKeyNormalized
 
                   if (!keysMatch) {
-                    console.warn(`[Notification] ⚠️ PRE-VALIDATION WARNING: Device ${device.id} VAPID key mismatch detected`)
+                    console.warn(`[Notification] ⚠️ PRE-VALIDATION FAILED: Device ${device.id} VAPID key mismatch detected`)
                     console.warn(`[Notification] ⚠️   - Key at registration: ${deviceVapidKey.substring(0, 50)}... (length: ${deviceVapidKey.length})`)
-                    console.warn(`[Notification] ⚠️   - Current key in app: ${currentVapidPublicKey.substring(0, 50)}... (length: ${currentVapidPublicKey.length})`)
-                    console.warn(`[Notification] ⚠️   - Will attempt to send anyway (device NOT marked as EXPIRED for testing purposes)`)
-                    // NOT marking as EXPIRED - continue to attempt send for testing
+                    console.warn(`[Notification] ⚠️   - Current key in app: ${currentKeyNormalized.substring(0, 50)}... (length: ${currentKeyNormalized.length})`)
+                    console.warn(`[Notification] ⚠️   - SKIPPING send to avoid 403 error - device needs re-registration`)
+                    console.warn(`[Notification] ⚠️   - Marking device as EXPIRED to force re-subscription`)
+                    
+                    // Mark device as EXPIRED and skip sending
+                    try {
+                      await db
+                        .update(tables.device)
+                        .set({
+                          status: 'EXPIRED',
+                          updatedAt: new Date().toISOString(),
+                        })
+                        .where(eq(tables.device.id, device.id))
+                      
+                      console.log(`[Notification] ✅ Device ${device.id} marked as EXPIRED due to VAPID key mismatch`)
+                    } catch (updateError) {
+                      console.error(`[Notification] ❌ Failed to mark device ${device.id} as EXPIRED:`, updateError)
+                    }
+                    
+                    // Skip this device - don't attempt to send
+                    continue
                   } else {
                     // Even if public keys match, the subscription might still fail if:
                     // 1. The private key being used doesn't match the private key that created the subscription
@@ -282,8 +301,7 @@ export const notificationMutations = defineMutation({
                       continue
                     }
                   }
-                  // If VAPID credentials mismatch (403), log detailed warning but continue trying
-                  // (Temporarily disabled marking as EXPIRED for testing purposes)
+                  // If VAPID credentials mismatch (403), mark device as EXPIRED and skip
                   else if (result.statusCode === 403 && result.error?.includes('VAPID credentials')) {
                     // Get current VAPID key from app
                     const appData = await db
@@ -340,21 +358,36 @@ export const notificationMutations = defineMutation({
                     console.warn(`[Notification] ⚠️   - O FCM valida o JWT assinado com a chave privada contra a chave pública original`)
                     console.warn(`[Notification] ⚠️   - Se o PAR de chaves não corresponder ao original, retorna 403`)
                     console.warn(`[Notification] ⚠️   - A única solução é criar uma NOVA subscription (novo endpoint) com o PAR de chaves correto`)
-                    console.warn(`[Notification] ⚠️   - Device NOT marked as EXPIRED (for testing purposes - will remain ACTIVE)`)
+                    console.warn(`[Notification] ⚠️   - Marking device as EXPIRED to force re-subscription`)
 
-                    // NOT marking as EXPIRED - device will remain ACTIVE to allow testing and debugging
-                    // try {
-                    //   await db
-                    //     .update(tables.device)
-                    //     .set({
-                    //       status: 'EXPIRED',
-                    //       updatedAt: new Date().toISOString(),
-                    //     })
-                    //     .where(eq(tables.device.id, device.id))
-                    //   console.log(`[Notification] Device ${device.id} marked as EXPIRED due to VAPID mismatch`)
-                    // } catch (updateError) {
-                    //   console.error(`[Notification] Failed to mark device ${device.id} as expired:`, updateError)
-                    // }
+                    // Mark device as EXPIRED - it needs to re-subscribe with current VAPID keys
+                    try {
+                      await db
+                        .update(tables.device)
+                        .set({
+                          status: 'EXPIRED',
+                          updatedAt: new Date().toISOString(),
+                        })
+                        .where(eq(tables.device.id, device.id))
+                      
+                      console.log(`[Notification] ✅ Device ${device.id} marked as EXPIRED due to VAPID credentials mismatch`)
+                      console.log(`[Notification] ✅ Device will need to create new subscription with current VAPID keys`)
+                    } catch (updateError) {
+                      console.error(`[Notification] ❌ Failed to mark device ${device.id} as EXPIRED:`, updateError)
+                    }
+                    
+                    // Create delivery log for this failure
+                    deliveryLogs.push({
+                      notificationId: newNotification[0].id,
+                      deviceId: device.id,
+                      status: 'FAILED' as const,
+                      errorMessage: `403 VAPID credentials mismatch: ${result.error}`,
+                      sentAt: null,
+                    })
+                    
+                    totalFailed++
+                    // Skip to next device - don't continue processing this one
+                    continue
                   }
                 }
 
