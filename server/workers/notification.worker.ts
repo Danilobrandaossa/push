@@ -79,8 +79,11 @@ async function processSendNotification(job: Job<SendNotificationJobData>) {
           },
         })
     } catch (logError: any) {
-      // If duplicate key error, try to update instead
-      if (logError?.code === '23505' || logError?.message?.includes('duplicate key')) {
+      // Handle different types of errors
+      const errorCode = logError?.code || logError?.constraint_name
+      
+      // 23505 = duplicate key (already handled by onConflictDoUpdate, but just in case)
+      if (errorCode === '23505' || logError?.message?.includes('duplicate key')) {
         console.warn(`[NotificationWorker] Delivery log already exists, updating: ${notificationId}/${deviceId}`)
         try {
           await db
@@ -99,7 +102,13 @@ async function processSendNotification(job: Job<SendNotificationJobData>) {
         } catch (updateError) {
           console.error(`[NotificationWorker] Failed to update delivery log: ${updateError}`)
         }
-      } else {
+      }
+      // 23503 = foreign key constraint violation (device was deleted)
+      else if (errorCode === '23503' || logError?.message?.includes('foreign key constraint')) {
+        console.warn(`[NotificationWorker] Device ${deviceId} no longer exists, skipping delivery log creation`)
+        // Device was deleted, can't create delivery log - this is OK, just log and continue
+      }
+      else {
         // Re-throw if it's a different error
         throw logError
       }
@@ -157,8 +166,11 @@ async function processSendNotification(job: Job<SendNotificationJobData>) {
           },
         })
     } catch (logError: any) {
-      // If duplicate key error, try to update instead
-      if (logError?.code === '23505' || logError?.message?.includes('duplicate key')) {
+      // Handle different types of errors
+      const errorCode = logError?.code || logError?.constraint_name
+      
+      // 23505 = duplicate key (already handled by onConflictDoUpdate, but just in case)
+      if (errorCode === '23505' || logError?.message?.includes('duplicate key')) {
         console.warn(`[NotificationWorker] Delivery log already exists for error, updating: ${notificationId}/${deviceId}`)
         try {
           await db
@@ -175,7 +187,13 @@ async function processSendNotification(job: Job<SendNotificationJobData>) {
         } catch (updateError) {
           console.error(`[NotificationWorker] Failed to update delivery log for error: ${updateError}`)
         }
-      } else {
+      }
+      // 23503 = foreign key constraint violation (device was deleted)
+      else if (errorCode === '23503' || logError?.message?.includes('foreign key constraint')) {
+        console.warn(`[NotificationWorker] Device ${deviceId} no longer exists, skipping delivery log creation for error`)
+        // Device was deleted, can't create delivery log - this is OK, just log and continue
+      }
+      else {
         // Log but don't throw - we don't want to fail the job processing because of log insertion failure
         console.error(`[NotificationWorker] Failed to insert delivery log for error: ${logError}`)
       }
