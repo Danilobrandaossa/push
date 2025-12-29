@@ -506,6 +506,7 @@ export const NotificationsDocument = /*#__PURE__*/ `
     badge
     sound
     clickAction
+    icon
     imageUrl
     targetDevices
     platforms

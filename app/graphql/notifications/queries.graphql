@@ -8,6 +8,7 @@ query notifications($appId: ID) {
     badge
     sound
     clickAction
+    icon
     imageUrl
     targetDevices
     platforms

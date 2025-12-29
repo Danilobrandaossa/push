@@ -2,7 +2,9 @@
 import { Badge } from 'abckit/shadcn/badge'
 import { Button } from 'abckit/shadcn/button'
 import { Card, CardContent, CardHeader, CardTitle } from 'abckit/shadcn/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from 'abckit/shadcn/dialog'
 import { Input } from 'abckit/shadcn/input'
+import { Label } from 'abckit/shadcn/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'abckit/shadcn/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'abckit/shadcn/table'
 import { useNotificationApi } from '~/graphql/notifications'
@@ -25,6 +27,8 @@ const notifications = computed(() => notificationsData.value || [])
 const searchQuery = ref('')
 const selectedStatus = ref('all')
 const selectedTimeRange = ref('7d')
+const showDetailsDialog = ref(false)
+const selectedNotification = ref<any>(null)
 
 // Filtered notifications
 const filteredNotifications = computed(() => {
@@ -144,8 +148,11 @@ function getDeliveryRate(notification: any) {
 }
 
 function viewNotificationDetails(notificationId: string) {
-  // TODO: Navigate to notification details page
-  navigateTo(`/apps/${appId.value}/notifications/${notificationId}`)
+  const notification = notifications.value.find(n => n.id === notificationId)
+  if (notification) {
+    selectedNotification.value = notification
+    showDetailsDialog.value = true
+  }
 }
 
 function refreshNotifications() {
@@ -289,6 +296,7 @@ function refreshNotifications() {
                 <TableHead>Status</TableHead>
                 <TableHead>Delivery</TableHead>
                 <TableHead>Sent</TableHead>
+                <TableHead>Scheduled</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -322,6 +330,12 @@ function refreshNotifications() {
                   <span class="text-sm">{{ formatDate(notification.sentAt) }}</span>
                 </TableCell>
                 <TableCell>
+                  <span v-if="notification.status === 'SCHEDULED' && notification.scheduledAt" class="text-sm text-muted-foreground">
+                    {{ formatDate(notification.scheduledAt) }}
+                  </span>
+                  <span v-else class="text-sm text-muted-foreground">-</span>
+                </TableCell>
+                <TableCell>
                   <span class="text-sm text-muted-foreground">{{ formatTimeAgo(notification.createdAt) }}</span>
                 </TableCell>
                 <TableCell>
@@ -341,4 +355,103 @@ function refreshNotifications() {
   <div v-else class="flex items-center justify-center h-64">
     <Icon name="lucide:loader-2" class="h-8 w-8 animate-spin" />
   </div>
+
+  <!-- Notification Details Dialog -->
+  <Dialog v-model:open="showDetailsDialog">
+    <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>Notification Details</DialogTitle>
+        <DialogDescription>
+          Complete information about this notification
+        </DialogDescription>
+      </DialogHeader>
+      
+      <div v-if="selectedNotification" class="space-y-4">
+        <!-- Status Badge -->
+        <div>
+          <Label class="text-sm font-medium">Status</Label>
+          <div class="mt-1">
+            <Badge :variant="getStatusBadge(selectedNotification.status).variant">
+              <Icon :name="getStatusBadge(selectedNotification.status).iconName" class="mr-1 h-3 w-3" />
+              {{ getStatusBadge(selectedNotification.status).text }}
+            </Badge>
+          </div>
+        </div>
+
+        <!-- Title and Body -->
+        <div>
+          <Label class="text-sm font-medium">Title</Label>
+          <p class="mt-1 text-sm">{{ selectedNotification.title }}</p>
+        </div>
+
+        <div>
+          <Label class="text-sm font-medium">Body</Label>
+          <p class="mt-1 text-sm text-muted-foreground">{{ selectedNotification.body }}</p>
+        </div>
+
+        <!-- Scheduling -->
+        <div v-if="selectedNotification.status === 'SCHEDULED' && selectedNotification.scheduledAt">
+          <Label class="text-sm font-medium">Scheduled For</Label>
+          <p class="mt-1 text-sm">{{ formatDate(selectedNotification.scheduledAt) }}</p>
+        </div>
+
+        <!-- Delivery Stats -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <Label class="text-sm font-medium">Total Targets</Label>
+            <p class="mt-1 text-lg font-semibold">{{ selectedNotification.totalTargets || 0 }}</p>
+          </div>
+          <div>
+            <Label class="text-sm font-medium">Delivered</Label>
+            <p class="mt-1 text-lg font-semibold text-green-600">{{ selectedNotification.totalDelivered || 0 }}</p>
+          </div>
+          <div>
+            <Label class="text-sm font-medium">Failed</Label>
+            <p class="mt-1 text-lg font-semibold text-red-600">{{ selectedNotification.totalFailed || 0 }}</p>
+          </div>
+          <div>
+            <Label class="text-sm font-medium">Delivery Rate</Label>
+            <p class="mt-1 text-lg font-semibold">{{ getDeliveryRate(selectedNotification) }}%</p>
+          </div>
+        </div>
+
+        <!-- Timestamps -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <Label class="text-sm font-medium">Created</Label>
+            <p class="mt-1 text-sm text-muted-foreground">{{ formatDate(selectedNotification.createdAt) }}</p>
+          </div>
+          <div v-if="selectedNotification.sentAt">
+            <Label class="text-sm font-medium">Sent</Label>
+            <p class="mt-1 text-sm text-muted-foreground">{{ formatDate(selectedNotification.sentAt) }}</p>
+          </div>
+        </div>
+
+        <!-- Additional Data -->
+        <div v-if="selectedNotification.icon || selectedNotification.imageUrl">
+          <Label class="text-sm font-medium">Media</Label>
+          <div class="mt-2 space-y-2">
+            <div v-if="selectedNotification.icon" class="flex items-center space-x-2">
+              <Label class="text-xs text-muted-foreground">Icon:</Label>
+              <a :href="selectedNotification.icon" target="_blank" class="text-xs text-blue-600 hover:underline truncate max-w-md">
+                {{ selectedNotification.icon }}
+              </a>
+            </div>
+            <div v-if="selectedNotification.imageUrl" class="flex items-center space-x-2">
+              <Label class="text-xs text-muted-foreground">Image:</Label>
+              <a :href="selectedNotification.imageUrl" target="_blank" class="text-xs text-blue-600 hover:underline truncate max-w-md">
+                {{ selectedNotification.imageUrl }}
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notification ID -->
+        <div class="pt-4 border-t">
+          <Label class="text-xs text-muted-foreground">Notification ID</Label>
+          <p class="mt-1 text-xs font-mono text-muted-foreground break-all">{{ selectedNotification.id }}</p>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
 </template>
