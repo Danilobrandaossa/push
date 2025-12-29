@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne, desc } from 'drizzle-orm'
+import { and, eq, inArray, ne, desc, sql } from 'drizzle-orm'
 import { createError } from 'h3'
 import { defineMutation } from 'nitro-graphql/utils/define'
 import { getProviderForApp } from '~~/server/providers'
@@ -391,8 +391,8 @@ export const notificationMutations = defineMutation({
                   }
                 }
 
-                // Create delivery log (skip if 410 - already created above before deletion)
-                if (result.statusCode !== 410) {
+                // Create delivery log (skip if 410 or 403 - already created above)
+                if (result.statusCode !== 410 && result.statusCode !== 403) {
                   deliveryLogs.push({
                     notificationId: newNotification[0].id,
                     deviceId: device.id,
@@ -431,9 +431,45 @@ export const notificationMutations = defineMutation({
         }
       }
 
-      // Insert delivery logs
+      // Insert delivery logs (use onConflictDoUpdate to handle duplicates)
       if (deliveryLogs.length > 0) {
-        await db.insert(tables.deliveryLog).values(deliveryLogs)
+        try {
+          await db
+            .insert(tables.deliveryLog)
+            .values(deliveryLogs)
+            .onConflictDoUpdate({
+              target: [tables.deliveryLog.notificationId, tables.deliveryLog.deviceId],
+              set: {
+                status: sql`excluded.status`,
+                errorMessage: sql`excluded."errorMessage"`,
+                providerResponse: sql`excluded."providerResponse"`,
+                sentAt: sql`excluded."sentAt"`,
+                updatedAt: new Date().toISOString(),
+              },
+            })
+        } catch (insertError) {
+          console.error('[Notification] Error inserting delivery logs:', insertError)
+          // Try individual inserts as fallback
+          for (const log of deliveryLogs) {
+            try {
+              await db
+                .insert(tables.deliveryLog)
+                .values(log)
+                .onConflictDoUpdate({
+                  target: [tables.deliveryLog.notificationId, tables.deliveryLog.deviceId],
+                  set: {
+                    status: sql`excluded.status`,
+                    errorMessage: sql`excluded."errorMessage"`,
+                    providerResponse: sql`excluded."providerResponse"`,
+                    sentAt: sql`excluded."sentAt"`,
+                    updatedAt: new Date().toISOString(),
+                  },
+                })
+            } catch (individualError) {
+              console.error(`[Notification] Failed to insert delivery log for device ${log.deviceId}:`, individualError)
+            }
+          }
+        }
       }
 
       // Count delivered: For Web Push, 'SENT' means delivered (no callback available)

@@ -2,6 +2,10 @@ import { and, eq, gte, sql } from 'drizzle-orm'
 import { defineField } from 'nitro-graphql/utils/define'
 import { decryptSensitiveData, isDataEncrypted } from '~~/server/utils/crypto'
 
+// Cache para avisos de descriptografia FCM (evita spam de logs)
+const fcmDecryptWarningCache = new Map<string, number>()
+const CACHE_DURATION_MS = 5 * 60 * 1000 // 5 minutos
+
 export const appFieldsResolver = defineField({
   App: {
     // Map fcmServiceAccount to fcmServerKey from database and decrypt if needed
@@ -24,17 +28,26 @@ export const appFieldsResolver = defineField({
                 // Use a simple cache to avoid logging the same error repeatedly
                 const appId = parent.id
                 const cacheKey = `fcm_decrypt_error_${appId}`
-                if (!globalThis[cacheKey as keyof typeof globalThis]) {
+                const now = Date.now()
+                const cachedTime = fcmDecryptWarningCache.get(cacheKey)
+
+                if (!cachedTime || (now - cachedTime) > CACHE_DURATION_MS) {
                   const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown error'
                   console.warn(`[App fcmServiceAccount Field] Failed to decrypt FCM service account for app ${appId}:`, errorMsg)
                   console.warn('[App fcmServiceAccount Field] This may happen if ENCRYPTION_KEY changed or data is corrupted')
                   console.warn('[App fcmServiceAccount Field] Returning null - FCM service account will need to be reconfigured')
-                  console.warn('[App fcmServiceAccount Field] (This warning will only appear once per app)')
-                  // Cache the warning for 5 minutes to avoid spam
-                  globalThis[cacheKey as keyof typeof globalThis] = true
-                  setTimeout(() => {
-                    delete (globalThis as any)[cacheKey]
-                  }, 5 * 60 * 1000) // 5 minutes
+                  console.warn('[App fcmServiceAccount Field] (This warning will only appear once per app every 5 minutes)')
+                  // Cache the warning timestamp
+                  fcmDecryptWarningCache.set(cacheKey, now)
+
+                  // Clean up old cache entries periodically
+                  if (fcmDecryptWarningCache.size > 100) {
+                    for (const [key, timestamp] of fcmDecryptWarningCache.entries()) {
+                      if ((now - timestamp) > CACHE_DURATION_MS) {
+                        fcmDecryptWarningCache.delete(key)
+                      }
+                    }
+                  }
                 }
                 return null // Return null instead of encrypted value to avoid breaking queries
               }
