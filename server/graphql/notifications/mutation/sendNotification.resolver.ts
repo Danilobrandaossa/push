@@ -159,7 +159,7 @@ export const notificationMutations = defineMutation({
                     console.warn(`[Notification] ⚠️   - Current key in app: ${currentKeyNormalized.substring(0, 50)}... (length: ${currentKeyNormalized.length})`)
                     console.warn(`[Notification] ⚠️   - SKIPPING send to avoid 403 error - device needs re-registration`)
                     console.warn(`[Notification] ⚠️   - Marking device as EXPIRED to force re-subscription`)
-                    
+
                     // Mark device as EXPIRED and skip sending
                     try {
                       await db
@@ -169,12 +169,12 @@ export const notificationMutations = defineMutation({
                           updatedAt: new Date().toISOString(),
                         })
                         .where(eq(tables.device.id, device.id))
-                      
+
                       console.log(`[Notification] ✅ Device ${device.id} marked as EXPIRED due to VAPID key mismatch`)
                     } catch (updateError) {
                       console.error(`[Notification] ❌ Failed to mark device ${device.id} as EXPIRED:`, updateError)
                     }
-                    
+
                     // Skip this device - don't attempt to send
                     continue
                   } else {
@@ -197,7 +197,7 @@ export const notificationMutations = defineMutation({
                   sound: input.sound,
                   clickAction: input.clickAction,
                   icon: input.icon || input.imageUrl || undefined, // Usar icon primeiro, fallback para imageUrl
-                  image: input.image || input.imageUrl || undefined, // image é para imagem grande
+                  image: input.imageUrl || undefined, // image é para imagem grande (usa imageUrl)
                   imageUrl: input.imageUrl || undefined, // Manter para compatibilidade
                 }
 
@@ -290,7 +290,7 @@ export const notificationMutations = defineMutation({
                     } catch (updateError) {
                       console.error(`[Notification] ❌ ERRO ao marcar device ${device.id} como EXPIRED:`, updateError)
                     }
-                    
+
                     // Create delivery log for this failure
                     deliveryLogs.push({
                       notificationId: newNotification[0].id,
@@ -299,7 +299,7 @@ export const notificationMutations = defineMutation({
                       errorMessage: `410 Gone: Subscription expired. Device marked as EXPIRED.`,
                       sentAt: null,
                     })
-                    
+
                     totalFailed++
                     // Skip to next device
                     continue
@@ -372,13 +372,13 @@ export const notificationMutations = defineMutation({
                           updatedAt: new Date().toISOString(),
                         })
                         .where(eq(tables.device.id, device.id))
-                      
+
                       console.log(`[Notification] ✅ Device ${device.id} marked as EXPIRED due to VAPID credentials mismatch`)
                       console.log(`[Notification] ✅ Device will need to create new subscription with current VAPID keys`)
                     } catch (updateError) {
                       console.error(`[Notification] ❌ Failed to mark device ${device.id} as EXPIRED:`, updateError)
                     }
-                    
+
                     // Create delivery log for this failure
                     deliveryLogs.push({
                       notificationId: newNotification[0].id,
@@ -387,7 +387,7 @@ export const notificationMutations = defineMutation({
                       errorMessage: `403 VAPID credentials mismatch: ${result.error}`,
                       sentAt: null,
                     })
-                    
+
                     totalFailed++
                     // Skip to next device - don't continue processing this one
                     continue
