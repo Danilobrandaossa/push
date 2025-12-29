@@ -1,7 +1,7 @@
 import type { Job } from 'bullmq'
 import type { ProcessScheduledJobData, RetryNotificationJobData, SendNotificationJobData } from '../queues/notification.queue'
 import { Worker } from 'bullmq'
-import { eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { getDatabase } from '../database/connection'
 import { deliveryLog, notification } from '../database/schema'
 import { getProviderForApp } from '../providers'
@@ -56,15 +56,54 @@ async function processSendNotification(job: Job<SendNotificationJobData>) {
 
     const result = await (provider as any).sendMessage(message)
 
-    // Create delivery log
-    await db.insert(deliveryLog).values({
-      notificationId,
-      deviceId,
-      status: result.success ? 'SENT' : 'FAILED',
-      errorMessage: result.error,
-      providerResponse: { messageId: result.messageId },
-      sentAt: result.success ? new Date().toISOString() : null,
-    })
+    // Create delivery log (use onConflictDoUpdate to handle duplicates)
+    try {
+      await db
+        .insert(deliveryLog)
+        .values({
+          notificationId,
+          deviceId,
+          status: result.success ? 'SENT' : 'FAILED',
+          errorMessage: result.error,
+          providerResponse: { messageId: result.messageId },
+          sentAt: result.success ? new Date().toISOString() : null,
+        })
+        .onConflictDoUpdate({
+          target: [deliveryLog.notificationId, deliveryLog.deviceId],
+          set: {
+            status: sql`excluded.status`,
+            errorMessage: sql`excluded."errorMessage"`,
+            providerResponse: sql`excluded."providerResponse"`,
+            sentAt: sql`excluded."sentAt"`,
+            updatedAt: new Date().toISOString(),
+          },
+        })
+    } catch (logError: any) {
+      // If duplicate key error, try to update instead
+      if (logError?.code === '23505' || logError?.message?.includes('duplicate key')) {
+        console.warn(`[NotificationWorker] Delivery log already exists, updating: ${notificationId}/${deviceId}`)
+        try {
+          await db
+            .update(deliveryLog)
+            .set({
+              status: result.success ? 'SENT' : 'FAILED',
+              errorMessage: result.error,
+              providerResponse: { messageId: result.messageId },
+              sentAt: result.success ? new Date().toISOString() : null,
+              updatedAt: new Date().toISOString(),
+            })
+            .where(and(
+              eq(deliveryLog.notificationId, notificationId),
+              eq(deliveryLog.deviceId, deviceId)
+            ))
+        } catch (updateError) {
+          console.error(`[NotificationWorker] Failed to update delivery log: ${updateError}`)
+        }
+      } else {
+        // Re-throw if it's a different error
+        throw logError
+      }
+    }
 
     // Update notification statistics
     if (result.success) {
@@ -98,14 +137,49 @@ async function processSendNotification(job: Job<SendNotificationJobData>) {
   catch (error) {
     console.error(`[NotificationWorker] Error processing job ${job.id}:`, error)
 
-    // Create failed delivery log
-    await db.insert(deliveryLog).values({
-      notificationId,
-      deviceId,
-      status: 'FAILED',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      sentAt: null,
-    })
+    // Create failed delivery log (use onConflictDoUpdate to handle duplicates)
+    try {
+      await db
+        .insert(deliveryLog)
+        .values({
+          notificationId,
+          deviceId,
+          status: 'FAILED',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          sentAt: null,
+        })
+        .onConflictDoUpdate({
+          target: [deliveryLog.notificationId, deliveryLog.deviceId],
+          set: {
+            status: sql`excluded.status`,
+            errorMessage: sql`excluded."errorMessage"`,
+            updatedAt: new Date().toISOString(),
+          },
+        })
+    } catch (logError: any) {
+      // If duplicate key error, try to update instead
+      if (logError?.code === '23505' || logError?.message?.includes('duplicate key')) {
+        console.warn(`[NotificationWorker] Delivery log already exists for error, updating: ${notificationId}/${deviceId}`)
+        try {
+          await db
+            .update(deliveryLog)
+            .set({
+              status: 'FAILED',
+              errorMessage: error instanceof Error ? error.message : 'Unknown error',
+              updatedAt: new Date().toISOString(),
+            })
+            .where(and(
+              eq(deliveryLog.notificationId, notificationId),
+              eq(deliveryLog.deviceId, deviceId)
+            ))
+        } catch (updateError) {
+          console.error(`[NotificationWorker] Failed to update delivery log for error: ${updateError}`)
+        }
+      } else {
+        // Log but don't throw - we don't want to fail the job processing because of log insertion failure
+        console.error(`[NotificationWorker] Failed to insert delivery log for error: ${logError}`)
+      }
+    }
 
     // Update failed count
     await db.execute(`
