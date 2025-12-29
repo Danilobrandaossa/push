@@ -265,41 +265,44 @@ export const notificationMutations = defineMutation({
                     statusCode: result.statusCode
                   })
 
-                  // 🔴 CRITICAL: 410 Gone = MORTE DEFINITIVA
+                  // 🔴 CRITICAL: 410 Gone = Subscription expirada
                   // Subscription expirou ou foi cancelada - endpoint não existe mais no FCM
-                  // NUNCA retentar - deletar device imediatamente
+                  // Marcar como EXPIRED (NÃO deletar - apenas exclusão manual deve deletar)
                   if (result.statusCode === 410) {
-                    console.error(`[Notification] 🔴 CRITICAL: Device ${device.id} subscription expired (410 Gone) - DELETING DEVICE IMMEDIATELY`)
+                    console.error(`[Notification] 🔴 CRITICAL: Device ${device.id} subscription expired (410 Gone)`)
                     console.error(`[Notification] 🔴 Subscription endpoint: ${device.token.substring(0, 50)}...`)
-                    console.error(`[Notification] 🔴 410 = morte definitiva - subscription não existe mais no FCM`)
-                    console.error(`[Notification] 🔴 Device será deletado - NUNCA retentar envio para este device`)
+                    console.error(`[Notification] 🔴 410 = subscription não existe mais no FCM`)
+                    console.error(`[Notification] 🔴 Marking device as EXPIRED (will not be included in future sends)`)
 
                     try {
-                      // Deletar device imediatamente - 410 é morte definitiva
+                      // Marcar como EXPIRED - NÃO deletar (apenas exclusão manual deve deletar)
                       await db
-                        .delete(tables.device)
+                        .update(tables.device)
+                        .set({
+                          status: 'EXPIRED',
+                          updatedAt: new Date().toISOString(),
+                        })
                         .where(eq(tables.device.id, device.id))
 
-                      console.log(`[Notification] ✅ Device ${device.id} deletado permanentemente devido a 410 Gone`)
-                      console.log(`[Notification] ✅ Este device nunca mais será incluído em envios futuros`)
-                      console.log(`[Notification] ℹ️ Delivery log não será criado (device deletado - foreign key constraint)`)
-
-                      // Pular para próximo device (continue)
-                      // NÃO criar delivery log - device foi deletado, não podemos criar log com foreign key
-                      continue
-                    } catch (deleteError) {
-                      console.error(`[Notification] ❌ ERRO ao deletar device ${device.id}:`, deleteError)
-                      // Se falhar ao deletar, criar delivery log para registrar o erro
-                      deliveryLogs.push({
-                        notificationId: newNotification[0].id,
-                        deviceId: device.id,
-                        status: 'FAILED' as const,
-                        errorMessage: `410 Gone: Subscription expired. Failed to delete device: ${deleteError instanceof Error ? deleteError.message : 'Unknown error'}`,
-                        sentAt: null,
-                      })
-                      // Continuar para próximo device
-                      continue
+                      console.log(`[Notification] ✅ Device ${device.id} marked as EXPIRED due to 410 Gone`)
+                      console.log(`[Notification] ✅ This device will not be included in future sends`)
+                      console.log(`[Notification] ✅ Device can be manually deleted if needed`)
+                    } catch (updateError) {
+                      console.error(`[Notification] ❌ ERRO ao marcar device ${device.id} como EXPIRED:`, updateError)
                     }
+                    
+                    // Create delivery log for this failure
+                    deliveryLogs.push({
+                      notificationId: newNotification[0].id,
+                      deviceId: device.id,
+                      status: 'FAILED' as const,
+                      errorMessage: `410 Gone: Subscription expired. Device marked as EXPIRED.`,
+                      sentAt: null,
+                    })
+                    
+                    totalFailed++
+                    // Skip to next device
+                    continue
                   }
                   // If VAPID credentials mismatch (403), mark device as EXPIRED and skip
                   else if (result.statusCode === 403 && result.error?.includes('VAPID credentials')) {

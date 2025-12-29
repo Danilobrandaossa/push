@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { defineMutation } from 'nitro-graphql/utils/define'
+import { createError } from 'h3'
 import { getHeader } from 'h3'
 import { processSubscriptionAutomations } from '~~/server/utils/automation'
 import { getProviderForApp } from '~~/server/providers'
