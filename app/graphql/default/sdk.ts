@@ -317,6 +317,14 @@ export const AutomationsDocument = /*#__PURE__*/ `
     startDate
     endDate
     nextRunAt
+    stats {
+      sent
+      delivered
+      failed
+      clicks
+      ctr
+      deliveryRate
+    }
     createdAt
     updatedAt
   }
@@ -496,8 +504,8 @@ export const ScheduleNotificationDocument = /*#__PURE__*/ `
 }
     `;
 export const NotificationsDocument = /*#__PURE__*/ `
-    query notifications($appId: ID) {
-  notifications(appId: $appId) {
+    query notifications($appId: ID, $filter: NotificationFilterInput) {
+  notifications(appId: $appId, filter: $filter) {
     id
     appId
     title
@@ -517,6 +525,7 @@ export const NotificationsDocument = /*#__PURE__*/ `
     totalDelivered
     totalFailed
     totalClicked
+    automationId
     createdAt
     updatedAt
     sentAt
@@ -544,6 +553,7 @@ export const NotificationDocument = /*#__PURE__*/ `
     totalDelivered
     totalFailed
     totalClicked
+    automationId
     createdAt
     updatedAt
     sentAt

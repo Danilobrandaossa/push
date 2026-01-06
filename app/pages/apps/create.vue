@@ -35,9 +35,9 @@ function goBack() {
   <div>
     <!-- App Page Header -->
     <AppPageHeader
-      title="Create App"
-      subtitle="Register a new application for push notifications"
-      badge="Creating"
+      title="Criar App"
+      subtitle="Registre um novo aplicativo para notificações push"
+      badge="Criando"
       @back="goBack"
     />
 
@@ -51,29 +51,29 @@ function goBack() {
       <!-- What's Next Card -->
       <Card class="mt-6">
         <CardHeader>
-          <CardTitle>What's Next?</CardTitle>
+          <CardTitle>Próximos Passos</CardTitle>
         </CardHeader>
         <CardContent>
           <div class="space-y-3">
             <div class="flex items-start space-x-3">
               <div class="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</div>
               <div>
-                <p class="font-medium">Configure Push Providers</p>
-                <p class="text-sm text-muted-foreground">Set up FCM, APNs, or Web Push credentials for your platforms</p>
+                <p class="font-medium">Configurar Provedores de Push</p>
+                <p class="text-sm text-muted-foreground">Configure as credenciais do FCM, APNs ou Web Push para suas plataformas</p>
               </div>
             </div>
             <div class="flex items-start space-x-3">
               <div class="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">2</div>
               <div>
-                <p class="font-medium">Get API Key</p>
-                <p class="text-sm text-muted-foreground">Use the generated API key to authenticate your requests</p>
+                <p class="font-medium">Obter Chave de API</p>
+                <p class="text-sm text-muted-foreground">Use a chave de API gerada para autenticar suas requisições</p>
               </div>
             </div>
             <div class="flex items-start space-x-3">
               <div class="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">3</div>
               <div>
-                <p class="font-medium">Register Devices</p>
-                <p class="text-sm text-muted-foreground">Start registering user devices to receive notifications</p>
+                <p class="font-medium">Registrar Dispositivos</p>
+                <p class="text-sm text-muted-foreground">Comece a registrar os dispositivos dos usuários para receber notificações</p>
               </div>
             </div>
           </div>

@@ -39,6 +39,17 @@ const _selectedApp = computed(() => {
 
 const { mutate: sendNotification, isLoading: isSending } = useSendNotification()
 
+function getStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    DELIVERED: 'ENTREGUE',
+    SENT: 'ENVIADO',
+    PENDING: 'PENDENTE',
+    SCHEDULED: 'AGENDADO',
+    FAILED: 'FALHOU',
+  }
+  return labels[status] || status
+}
+
 async function sendTestNotification() {
   if (!testNotification.value.appId || !testNotification.value.title || !testNotification.value.body) {
     return
@@ -77,17 +88,17 @@ async function sendTestNotification() {
     <div class="mb-8">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 class="text-3xl sm:text-4xl font-bold mb-2">Welcome to NitroPing</h1>
-          <p class="text-muted-foreground">Manage your push notifications with ease</p>
+          <h1 class="text-3xl sm:text-4xl font-bold mb-2">Bem-vindo ao NitroPing</h1>
+          <p class="text-muted-foreground">Gerencie suas notificações push com facilidade</p>
         </div>
         <div class="flex gap-2">
           <Button variant="outline" @click="navigateTo('/apps')">
             <Icon name="lucide:activity" class="mr-2 size-4" />
-            View Apps
+            Ver Apps
           </Button>
           <Button @click="navigateTo('/apps/create')">
             <Icon name="lucide:plus" class="mr-2 size-4" />
-            Create App
+            Criar App
           </Button>
         </div>
       </div>
@@ -97,7 +108,7 @@ async function sendTestNotification() {
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle class="text-sm font-medium">Total Apps</CardTitle>
+          <CardTitle class="text-sm font-medium">Total de Apps</CardTitle>
           <Icon name="lucide:activity" class="size-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -107,7 +118,7 @@ async function sendTestNotification() {
 
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle class="text-sm font-medium">Active Devices</CardTitle>
+          <CardTitle class="text-sm font-medium">Dispositivos Ativos</CardTitle>
           <Icon name="lucide:smartphone" class="size-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -117,23 +128,23 @@ async function sendTestNotification() {
 
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle class="text-sm font-medium">Notifications Sent</CardTitle>
+          <CardTitle class="text-sm font-medium">Notificações Enviadas</CardTitle>
           <Icon name="lucide:send" class="size-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div class="text-2xl font-bold">{{ stats?.notificationsSent || 0 }}</div>
-          <p class="text-xs text-muted-foreground">Last 24 hours</p>
+          <p class="text-xs text-muted-foreground">Últimas 24 horas</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle class="text-sm font-medium">Delivery Rate</CardTitle>
+          <CardTitle class="text-sm font-medium">Taxa de Entrega</CardTitle>
           <Icon name="lucide:trending-up" class="size-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div class="text-2xl font-bold">{{ stats?.deliveryRate || 0 }}%</div>
-          <p class="text-xs text-muted-foreground">Last 24 hours</p>
+          <p class="text-xs text-muted-foreground">Últimas 24 horas</p>
         </CardContent>
       </Card>
     </div>
@@ -144,11 +155,11 @@ async function sendTestNotification() {
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0">
           <div>
-            <CardTitle>Recent Apps</CardTitle>
-            <CardDescription>Your recently created applications</CardDescription>
+            <CardTitle>Apps Recentes</CardTitle>
+            <CardDescription>Seus aplicativos criados recentemente</CardDescription>
           </div>
           <Button variant="outline" size="sm" @click="navigateTo('/apps')">
-            View All
+            Ver Todos
           </Button>
         </CardHeader>
         <CardContent>
@@ -160,7 +171,7 @@ async function sendTestNotification() {
                 </div>
                 <div>
                   <p class="font-medium">{{ app.name }}</p>
-                  <p class="text-sm text-muted-foreground">{{ app.description || 'No description' }}</p>
+                  <p class="text-sm text-muted-foreground">{{ app.description || 'Sem descrição' }}</p>
                 </div>
               </div>
               <div class="text-right">
@@ -170,9 +181,9 @@ async function sendTestNotification() {
           </div>
           <div v-else class="text-center py-8">
             <Icon name="lucide:activity" class="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-            <p class="text-sm text-muted-foreground">No apps created yet</p>
+            <p class="text-sm text-muted-foreground">Nenhum app criado ainda</p>
             <Button variant="outline" size="sm" class="mt-2" @click="navigateTo('/apps/create')">
-              Create First App
+              Criar Primeiro App
             </Button>
           </div>
         </CardContent>
@@ -182,11 +193,11 @@ async function sendTestNotification() {
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0">
           <div>
-            <CardTitle>Recent Notifications</CardTitle>
-            <CardDescription>Latest notifications sent</CardDescription>
+            <CardTitle>Notificações Recentes</CardTitle>
+            <CardDescription>Últimas notificações enviadas</CardDescription>
           </div>
           <Button variant="outline" size="sm" @click="navigateTo('/notifications')">
-            View All
+            Ver Todas
           </Button>
         </CardHeader>
         <CardContent>
@@ -218,10 +229,10 @@ async function sendTestNotification() {
                       'bg-red-100 text-red-600': notification.status === 'FAILED',
                     }"
                   >
-                    {{ notification.status }}
+                    {{ getStatusLabel(notification.status) }}
                   </span>
                   <span class="text-xs text-muted-foreground">
-                    {{ new Intl.DateTimeFormat('en', {
+                    {{ new Intl.DateTimeFormat('pt-BR', {
                       month: 'short',
                       day: 'numeric',
                       hour: '2-digit',
@@ -237,9 +248,9 @@ async function sendTestNotification() {
           </div>
           <div v-else class="text-center py-8">
             <Icon name="lucide:send" class="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-            <p class="text-sm text-muted-foreground">No notifications sent yet</p>
+            <p class="text-sm text-muted-foreground">Nenhuma notificação enviada ainda</p>
             <Button variant="outline" size="sm" class="mt-2" @click="showSendNotification = true">
-              Send First Notification
+              Enviar Primeira Notificação
             </Button>
           </div>
         </CardContent>
@@ -249,36 +260,36 @@ async function sendTestNotification() {
     <!-- Getting Started Section -->
     <Card>
       <CardHeader>
-        <CardTitle>Getting Started</CardTitle>
-        <CardDescription>Quick guide to set up push notifications</CardDescription>
+        <CardTitle>Primeiros Passos</CardTitle>
+        <CardDescription>Guia rápido para configurar notificações push</CardDescription>
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="flex items-start space-x-4">
           <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">1</div>
           <div>
-            <h4 class="font-medium">Create an App</h4>
-            <p class="text-sm text-muted-foreground">Register your application and get API credentials</p>
+            <h4 class="font-medium">Crie um App</h4>
+            <p class="text-sm text-muted-foreground">Registre seu aplicativo e obtenha as credenciais da API</p>
           </div>
         </div>
         <div class="flex items-start space-x-4">
           <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">2</div>
           <div>
-            <h4 class="font-medium">Configure Providers</h4>
-            <p class="text-sm text-muted-foreground">Set up FCM, APNs, or Web Push credentials</p>
+            <h4 class="font-medium">Configure Provedores</h4>
+            <p class="text-sm text-muted-foreground">Configure as credenciais do FCM, APNs ou Web Push</p>
           </div>
         </div>
         <div class="flex items-start space-x-4">
           <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">3</div>
           <div>
-            <h4 class="font-medium">Register Devices</h4>
-            <p class="text-sm text-muted-foreground">Use the API to register user devices</p>
+            <h4 class="font-medium">Registre Dispositivos</h4>
+            <p class="text-sm text-muted-foreground">Use a API para registrar os dispositivos dos usuários</p>
           </div>
         </div>
         <div class="flex items-start space-x-4">
           <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">4</div>
           <div>
-            <h4 class="font-medium">Send Notifications</h4>
-            <p class="text-sm text-muted-foreground">Start sending push notifications to your users</p>
+            <h4 class="font-medium">Envie Notificações</h4>
+            <p class="text-sm text-muted-foreground">Comece a enviar notificações push para seus usuários</p>
           </div>
         </div>
       </CardContent>
@@ -288,15 +299,15 @@ async function sendTestNotification() {
     <Dialog v-model:open="showSendNotification">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Send Test Notification</DialogTitle>
-          <DialogDescription>Send a test notification to check your setup</DialogDescription>
+          <DialogTitle>Enviar Notificação de Teste</DialogTitle>
+          <DialogDescription>Envie uma notificação de teste para verificar sua configuração</DialogDescription>
         </DialogHeader>
         <div class="grid gap-4 py-4">
           <div class="grid gap-2">
-            <Label for="notification-app">Select App</Label>
+            <Label for="notification-app">Selecionar App</Label>
             <Select v-model="testNotification.appId">
               <SelectTrigger>
-                <SelectValue placeholder="Choose an app" />
+                <SelectValue placeholder="Escolha um app" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem v-for="app in appsData" :key="app.id" :value="app.id">
@@ -306,31 +317,31 @@ async function sendTestNotification() {
             </Select>
           </div>
           <div class="grid gap-2">
-            <Label for="notification-title">Title</Label>
+            <Label for="notification-title">Título</Label>
             <Input
               id="notification-title"
               v-model="testNotification.title"
-              placeholder="Hello World!"
+              placeholder="Olá Mundo!"
             />
           </div>
           <div class="grid gap-2">
-            <Label for="notification-body">Message</Label>
+            <Label for="notification-body">Mensagem</Label>
             <Textarea
               id="notification-body"
               v-model="testNotification.body"
-              placeholder="This is a test notification from NitroPing"
+              placeholder="Esta é uma notificação de teste do NitroPing"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showSendNotification = false">Cancel</Button>
+          <Button variant="outline" @click="showSendNotification = false">Cancelar</Button>
           <Button
             :disabled="!testNotification.appId || !testNotification.title || !testNotification.body || isSending"
             @click="sendTestNotification"
           >
             <Icon v-if="!isSending" name="lucide:send" class="mr-2 size-4" />
             <div v-else class="mr-2 size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            {{ isSending ? 'Sending...' : 'Send Notification' }}
+            {{ isSending ? 'Enviando...' : 'Enviar Notificação' }}
           </Button>
         </DialogFooter>
       </DialogContent>

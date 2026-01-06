@@ -133,24 +133,24 @@ async function copyAppId() {
     <!-- Settings Content -->
     <div class="space-y-6">
       <div>
-        <h2 class="text-2xl font-bold mb-2">App Settings</h2>
-        <p class="text-muted-foreground">Configure your application settings and preferences.</p>
+        <h2 class="text-2xl font-bold mb-2">Configurações do App</h2>
+        <p class="text-muted-foreground">Configure as definições e preferências do seu aplicativo.</p>
       </div>
 
       <!-- General Settings -->
       <Card>
         <CardHeader>
-          <CardTitle>General Information</CardTitle>
-          <CardDescription>Basic information about your application</CardDescription>
+          <CardTitle>Informações Gerais</CardTitle>
+          <CardDescription>Informações básicas sobre o seu aplicativo</CardDescription>
         </CardHeader>
         <CardContent class="space-y-6">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-2">
-              <Label for="app-name">App Name</Label>
+              <Label for="app-name">Nome do App</Label>
               <Input
                 id="app-name"
                 v-model="appForm.name"
-                placeholder="My Awesome App"
+                placeholder="Meu App Incrível"
                 :disabled="isUpdatingApp"
               />
             </div>
@@ -162,12 +162,12 @@ async function copyAppId() {
                 readonly
                 class="bg-muted"
               />
-              <p class="text-xs text-muted-foreground">Slug cannot be changed after creation</p>
+              <p class="text-xs text-muted-foreground">O slug não pode ser alterado após a criação</p>
             </div>
           </div>
 
           <div class="space-y-2">
-            <Label for="app-id">App ID</Label>
+            <Label for="app-id">ID do App</Label>
             <div class="flex items-center gap-2">
               <Input
                 id="app-id"
@@ -185,15 +185,15 @@ async function copyAppId() {
                 <Icon v-else name="lucide:copy" class="size-4" />
               </Button>
             </div>
-            <p class="text-xs text-muted-foreground">Use this ID to configure the WordPress plugin</p>
+            <p class="text-xs text-muted-foreground">Use este ID para configurar o plugin do WordPress</p>
           </div>
 
           <div class="space-y-2">
-            <Label for="app-description">Description</Label>
+            <Label for="app-description">Descrição</Label>
             <Textarea
               id="app-description"
               v-model="appForm.description"
-              placeholder="A brief description of your app..."
+              placeholder="Uma breve descrição do seu app..."
               rows="3"
               :disabled="isUpdatingApp"
             />
@@ -205,9 +205,9 @@ async function copyAppId() {
               v-model:checked="appForm.isActive"
               :disabled="isUpdatingApp"
             />
-            <Label for="app-active">App is active</Label>
+            <Label for="app-active">App está ativo</Label>
           </div>
-          <p class="text-xs text-muted-foreground">Inactive apps cannot receive or send notifications</p>
+          <p class="text-xs text-muted-foreground">Apps inativos não podem receber ou enviar notificações</p>
 
           <div class="flex justify-end">
             <Button
@@ -216,7 +216,7 @@ async function copyAppId() {
             >
               <Icon v-if="isUpdatingApp" name="lucide:loader-2" class="mr-2 size-4 animate-spin" />
               <Icon v-else name="lucide:save" class="mr-2 size-4" />
-              Save Changes
+              Salvar Alterações
             </Button>
           </div>
         </CardContent>
@@ -225,29 +225,29 @@ async function copyAppId() {
       <!-- API Key Management -->
       <Card>
         <CardHeader>
-          <CardTitle>API Key Management</CardTitle>
-          <CardDescription>Manage your application's API key for authentication</CardDescription>
+          <CardTitle>Gerenciamento de API Key</CardTitle>
+          <CardDescription>Gerencie a chave de API do seu aplicativo para autenticação</CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
           <div class="flex items-center justify-between p-4 border rounded-lg">
             <div class="space-y-1">
-              <h4 class="font-medium">Current API Key</h4>
+              <h4 class="font-medium">Chave de API Atual</h4>
               <p class="text-sm text-muted-foreground">
-                Key ID: <code class="bg-muted px-1 rounded">{{ app.apiKey?.substring(0, 12) }}...</code>
+                ID da Chave: <code class="bg-muted px-1 rounded">{{ app.apiKey?.substring(0, 12) }}...</code>
               </p>
-              <p class="text-xs text-muted-foreground">Created: {{ new Date(app.createdAt).toLocaleDateString() }}</p>
+              <p class="text-xs text-muted-foreground">Criado em: {{ new Date(app.createdAt).toLocaleDateString('pt-BR') }}</p>
             </div>
             <Button variant="outline" :disabled="isRegeneratingKey" @click="showRegenerateDialog = true">
               <Icon name="lucide:key" class="mr-2 size-4" />
-              Regenerate
+              Regerar
             </Button>
           </div>
 
           <Alert>
             <Icon name="lucide:alert-triangle" class="size-4" />
-            <AlertTitle>Warning</AlertTitle>
+            <AlertTitle>Aviso</AlertTitle>
             <AlertDescription>
-              Regenerating your API key will invalidate the current key. Make sure to update your applications with the new key.
+              Regerar sua chave de API invalidará a chave atual. Certifique-se de atualizar seus aplicativos com a nova chave.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -256,21 +256,21 @@ async function copyAppId() {
       <!-- Usage Statistics -->
       <Card>
         <CardHeader>
-          <CardTitle>Usage Statistics</CardTitle>
-          <CardDescription>Current usage and limits for your application</CardDescription>
+          <CardTitle>Estatísticas de Uso</CardTitle>
+          <CardDescription>Uso atual e limites para o seu aplicativo</CardDescription>
         </CardHeader>
         <CardContent>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="space-y-2">
-              <Label class="text-sm font-medium">Total Devices</Label>
+              <Label class="text-sm font-medium">Total de Dispositivos</Label>
               <div class="text-2xl font-bold">{{ app.stats?.totalDevices || 0 }}</div>
             </div>
             <div class="space-y-2">
-              <Label class="text-sm font-medium">Notifications Sent</Label>
+              <Label class="text-sm font-medium">Notificações Enviadas</Label>
               <div class="text-2xl font-bold">{{ app.stats?.sentToday || 0 }}</div>
             </div>
             <div class="space-y-2">
-              <Label class="text-sm font-medium">API Calls</Label>
+              <Label class="text-sm font-medium">Chamadas de API</Label>
               <div class="text-2xl font-bold">{{ app.stats?.apiCalls || 0 }}</div>
             </div>
           </div>
@@ -280,20 +280,20 @@ async function copyAppId() {
       <!-- Danger Zone -->
       <Card class="border-destructive">
         <CardHeader>
-          <CardTitle class="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Irreversible and destructive actions</CardDescription>
+          <CardTitle class="text-destructive">Zona de Perigo</CardTitle>
+          <CardDescription>Ações irreversíveis e destrutivas</CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
           <div class="flex items-center justify-between p-4 border border-destructive rounded-lg">
             <div class="space-y-1">
-              <h4 class="font-medium text-destructive">Delete Application</h4>
+              <h4 class="font-medium text-destructive">Excluir Aplicativo</h4>
               <p class="text-sm text-muted-foreground">
-                Permanently delete this application and all its data. This action cannot be undone.
+                Excluir permanentemente este aplicativo e todos os seus dados. Esta ação não pode ser desfeita.
               </p>
             </div>
             <Button variant="destructive" :disabled="isDeletingApp" @click="showDeleteDialog = true">
               <Icon name="lucide:trash-2" class="mr-2 size-4" />
-              Delete App
+              Excluir App
             </Button>
           </div>
         </CardContent>
@@ -304,24 +304,24 @@ async function copyAppId() {
     <Dialog v-model:open="showRegenerateDialog">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Regenerate API Key</DialogTitle>
+          <DialogTitle>Regerar Chave de API</DialogTitle>
           <DialogDescription>
-            This will generate a new API key and invalidate the current one. Make sure to update your applications with the new key.
+            Isso gerará uma nova chave de API e invalidará a atual. Certifique-se de atualizar seus aplicativos com a nova chave.
           </DialogDescription>
         </DialogHeader>
         <Alert>
           <Icon name="lucide:alert-triangle" class="size-4" />
-          <AlertTitle>This action cannot be undone</AlertTitle>
+          <AlertTitle>Esta ação não pode ser desfeita</AlertTitle>
           <AlertDescription>
-            Your current API key will stop working immediately after regeneration.
+            Sua chave de API atual parará de funcionar imediatamente após a regeração.
           </AlertDescription>
         </Alert>
         <DialogFooter>
-          <Button variant="outline" @click="showRegenerateDialog = false">Cancel</Button>
+          <Button variant="outline" @click="showRegenerateDialog = false">Cancelar</Button>
           <Button :disabled="isRegeneratingKey" @click="regenerateApiKey">
             <Icon v-if="isRegeneratingKey" name="lucide:loader-2" class="mr-2 size-4 animate-spin" />
             <Icon v-else name="lucide:key" class="mr-2 size-4" />
-            Regenerate Key
+            Regerar Chave
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -331,36 +331,36 @@ async function copyAppId() {
     <Dialog v-model:open="showDeleteDialog">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Application</DialogTitle>
+          <DialogTitle>Excluir Aplicativo</DialogTitle>
           <DialogDescription>
-            This action cannot be undone. This will permanently delete the application and all its data.
+            Esta ação não pode ser desfeita. Isso excluirá permanentemente o aplicativo e todos os seus dados.
           </DialogDescription>
         </DialogHeader>
         <div class="space-y-4">
           <Alert variant="destructive">
             <Icon name="lucide:alert-triangle" class="size-4" />
-            <AlertTitle>Warning</AlertTitle>
+            <AlertTitle>Aviso</AlertTitle>
             <AlertDescription>
-              This will delete all devices, notifications, and settings associated with this app.
+              Isso excluirá todos os dispositivos, notificações e configurações associados a este app.
             </AlertDescription>
           </Alert>
           <div class="space-y-2">
             <Label for="delete-confirm">
-              Type <code class="bg-muted px-1 rounded">{{ app.slug }}</code> to confirm:
+              Digite <code class="bg-muted px-1 rounded">{{ app.slug }}</code> para confirmar:
             </Label>
             <Input
               id="delete-confirm"
               v-model="deleteConfirmText"
-              placeholder="Type the app slug here"
+              placeholder="Digite o slug do app aqui"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showDeleteDialog = false">Cancel</Button>
+          <Button variant="outline" @click="showDeleteDialog = false">Cancelar</Button>
           <Button variant="destructive" :disabled="!canDelete || isDeletingApp" @click="deleteApp">
             <Icon v-if="isDeletingApp" name="lucide:loader-2" class="mr-2 size-4 animate-spin" />
             <Icon v-else name="lucide:trash-2" class="mr-2 size-4" />
-            Delete Application
+            Excluir Aplicativo
           </Button>
         </DialogFooter>
       </DialogContent>

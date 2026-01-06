@@ -8,37 +8,37 @@ const route = useRoute()
 
 const navigationItems = [
   {
-    name: 'Overview',
+    name: 'Visão Geral',
     href: `/apps/${_props.appId}`,
     icon: 'lucide:trending-up',
     current: route.path === `/apps/${_props.appId}`,
   },
   {
-    name: 'Push Providers',
+    name: 'Provedores',
     href: `/apps/${_props.appId}/providers`,
     icon: 'lucide:globe',
     current: route.path === `/apps/${_props.appId}/providers`,
   },
   {
-    name: 'Devices',
+    name: 'Dispositivos',
     href: `/apps/${_props.appId}/devices`,
     icon: 'lucide:smartphone',
     current: route.path === `/apps/${_props.appId}/devices`,
   },
   {
-    name: 'Notifications',
+    name: 'Notificações',
     href: `/apps/${_props.appId}/notifications`,
     icon: 'lucide:activity',
     current: route.path === `/apps/${_props.appId}/notifications`,
   },
   {
-    name: 'Automations',
+    name: 'Automações',
     href: `/apps/${_props.appId}/automations`,
     icon: 'lucide:zap',
     current: route.path === `/apps/${_props.appId}/automations`,
   },
   {
-    name: 'Settings',
+    name: 'Configurações',
     href: `/apps/${_props.appId}/settings`,
     icon: 'lucide:cog',
     current: route.path === `/apps/${_props.appId}/settings`,

@@ -39,8 +39,8 @@ function configureWebPush() {
     <!-- Providers Content -->
     <div class="space-y-6">
       <div>
-        <h2 class="text-2xl font-bold mb-2">Push Providers</h2>
-        <p class="text-muted-foreground">Configure your push notification providers to start sending notifications.</p>
+        <h2 class="text-2xl font-bold mb-2">Provedores de Push</h2>
+        <p class="text-muted-foreground">Configure seus provedores de notificação push para começar a enviar notificações.</p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -53,26 +53,26 @@ function configureWebPush() {
               </div>
               <div>
                 <CardTitle>Firebase FCM</CardTitle>
-                <CardDescription>Android push notifications</CardDescription>
+                <CardDescription>Notificações Android</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent class="space-y-4">
             <Badge :variant="app.fcmProjectId ? 'default' : 'secondary'">
-              {{ app.fcmProjectId ? 'Configured' : 'Not Configured' }}
+              {{ app.fcmProjectId ? 'Configurado' : 'Não Configurado' }}
             </Badge>
 
             <div v-if="app.fcmProjectId" class="space-y-2">
               <p class="text-sm"><strong>Project ID:</strong> {{ app.fcmProjectId }}</p>
-              <p class="text-sm text-muted-foreground">Service account configured</p>
+              <p class="text-sm text-muted-foreground">Conta de serviço configurada</p>
             </div>
 
             <div v-else class="space-y-2">
-              <p class="text-sm text-muted-foreground">Configure Firebase Cloud Messaging to send notifications to Android devices.</p>
+              <p class="text-sm text-muted-foreground">Configure o Firebase Cloud Messaging para enviar notificações para dispositivos Android.</p>
             </div>
 
             <Button variant="outline" size="sm" class="w-full" @click="configureFCM">
-              {{ app.fcmProjectId ? 'Update' : 'Configure' }} FCM
+              {{ app.fcmProjectId ? 'Atualizar' : 'Configurar' }} FCM
             </Button>
           </CardContent>
         </Card>
@@ -86,27 +86,27 @@ function configureWebPush() {
               </div>
               <div>
                 <CardTitle>Apple APNs</CardTitle>
-                <CardDescription>iOS push notifications</CardDescription>
+                <CardDescription>Notificações iOS</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent class="space-y-4">
             <Badge :variant="app.apnsKeyId ? 'default' : 'secondary'">
-              {{ app.apnsKeyId ? 'Configured' : 'Not Configured' }}
+              {{ app.apnsKeyId ? 'Configurado' : 'Não Configurado' }}
             </Badge>
 
             <div v-if="app.apnsKeyId" class="space-y-2">
               <p class="text-sm"><strong>Key ID:</strong> {{ app.apnsKeyId }}</p>
               <p class="text-sm"><strong>Team ID:</strong> {{ app.apnsTeamId }}</p>
-              <p class="text-sm text-muted-foreground">Private key configured</p>
+              <p class="text-sm text-muted-foreground">Chave privada configurada</p>
             </div>
 
             <div v-else class="space-y-2">
-              <p class="text-sm text-muted-foreground">Configure Apple Push Notification service to send notifications to iOS devices.</p>
+              <p class="text-sm text-muted-foreground">Configure o Apple Push Notification service para enviar notificações para dispositivos iOS.</p>
             </div>
 
             <Button variant="outline" size="sm" class="w-full" @click="configureAPNs">
-              {{ app.apnsKeyId ? 'Update' : 'Configure' }} APNs
+              {{ app.apnsKeyId ? 'Atualizar' : 'Configurar' }} APNs
             </Button>
           </CardContent>
         </Card>
@@ -120,26 +120,26 @@ function configureWebPush() {
               </div>
               <div>
                 <CardTitle>Web Push</CardTitle>
-                <CardDescription>Browser notifications</CardDescription>
+                <CardDescription>Notificações de Navegador</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent class="space-y-4">
             <Badge :variant="app.vapidPublicKey ? 'default' : 'secondary'">
-              {{ app.vapidPublicKey ? 'Configured' : 'Not Configured' }}
+              {{ app.vapidPublicKey ? 'Configurado' : 'Não Configurado' }}
             </Badge>
 
             <div v-if="app.vapidPublicKey" class="space-y-2">
-              <p class="text-sm"><strong>Subject:</strong> {{ app.vapidSubject }}</p>
-              <p class="text-sm text-muted-foreground">VAPID keys configured</p>
+              <p class="text-sm"><strong>Assunto:</strong> {{ app.vapidSubject }}</p>
+              <p class="text-sm text-muted-foreground">Chaves VAPID configuradas</p>
             </div>
 
             <div v-else class="space-y-2">
-              <p class="text-sm text-muted-foreground">Configure Web Push to send notifications to web browsers.</p>
+              <p class="text-sm text-muted-foreground">Configure Web Push para enviar notificações para navegadores web.</p>
             </div>
 
             <Button variant="outline" size="sm" class="w-full" @click="configureWebPush">
-              {{ app.vapidPublicKey ? 'Update' : 'Configure' }} Web Push
+              {{ app.vapidPublicKey ? 'Atualizar' : 'Configurar' }} Web Push
             </Button>
           </CardContent>
         </Card>
@@ -148,36 +148,36 @@ function configureWebPush() {
       <!-- Configuration Guide -->
       <Card>
         <CardHeader>
-          <CardTitle>Configuration Guide</CardTitle>
-          <CardDescription>Follow these steps to set up your push providers</CardDescription>
+          <CardTitle>Guia de Configuração</CardTitle>
+          <CardDescription>Siga estes passos para configurar seus provedores de push</CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="space-y-2">
               <h4 class="font-medium text-orange-600">Firebase FCM</h4>
               <ol class="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Create a Firebase project</li>
-                <li>Generate a service account key</li>
-                <li>Upload the JSON file</li>
-                <li>Test with Android devices</li>
+                <li>Crie um projeto Firebase</li>
+                <li>Gere uma chave de conta de serviço</li>
+                <li>Faça upload do arquivo JSON</li>
+                <li>Teste com dispositivos Android</li>
               </ol>
             </div>
             <div class="space-y-2">
               <h4 class="font-medium text-blue-600">Apple APNs</h4>
               <ol class="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Create an Apple Developer account</li>
-                <li>Generate APNs Auth Key</li>
-                <li>Get your Team ID and Key ID</li>
-                <li>Test with iOS devices</li>
+                <li>Crie uma conta Apple Developer</li>
+                <li>Gere uma chave de autenticação APNs</li>
+                <li>Obtenha seu Team ID e Key ID</li>
+                <li>Teste com dispositivos iOS</li>
               </ol>
             </div>
             <div class="space-y-2">
               <h4 class="font-medium text-green-600">Web Push</h4>
               <ol class="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Generate VAPID keys</li>
-                <li>Set subject (email or URL)</li>
-                <li>Configure service worker</li>
-                <li>Test with browsers</li>
+                <li>Gere chaves VAPID</li>
+                <li>Defina o assunto (email ou URL)</li>
+                <li>Configure o service worker</li>
+                <li>Teste com navegadores</li>
               </ol>
             </div>
           </div>

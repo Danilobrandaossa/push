@@ -43,17 +43,17 @@ async function sendTestNotification() {
         <p class="text-muted-foreground">{{ app.slug }}</p>
       </div>
       <Badge :variant="app.isActive ? 'default' : 'secondary'">
-        {{ app.isActive ? 'Active' : 'Inactive' }}
+        {{ app.isActive ? 'Ativo' : 'Inativo' }}
       </Badge>
     </div>
     <div class="flex space-x-2">
       <Button variant="outline" @click="showSendTest = true">
         <Icon name="lucide:send" class="mr-2 size-4" />
-        Send Test
+        Enviar Teste
       </Button>
       <Button variant="outline">
         <Icon name="lucide:download" class="mr-2 size-4" />
-        Export Data
+        Exportar Dados
       </Button>
     </div>
   </div>
@@ -62,31 +62,31 @@ async function sendTestNotification() {
   <Dialog v-model:open="showSendTest">
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Send Test Notification</DialogTitle>
-        <DialogDescription>Send a test notification to {{ app.name }}</DialogDescription>
+        <DialogTitle>Enviar Notificação de Teste</DialogTitle>
+        <DialogDescription>Enviar notificação de teste para {{ app.name }}</DialogDescription>
       </DialogHeader>
       <div class="space-y-4">
         <div class="space-y-2">
-          <Label for="test-title">Title</Label>
+          <Label for="test-title">Título</Label>
           <Input
             id="test-title"
             v-model="testNotification.title"
-            placeholder="Hello World!"
+            placeholder="Olá Mundo!"
           />
         </div>
         <div class="space-y-2">
-          <Label for="test-body">Message</Label>
+          <Label for="test-body">Mensagem</Label>
           <Textarea
             id="test-body"
             v-model="testNotification.body"
-            placeholder="This is a test notification"
+            placeholder="Esta é uma notificação de teste"
             rows="3"
           />
         </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" @click="showSendTest = false">Cancel</Button>
-        <Button @click="sendTestNotification">Send Test</Button>
+        <Button variant="outline" @click="showSendTest = false">Cancelar</Button>
+        <Button @click="sendTestNotification">Enviar Teste</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

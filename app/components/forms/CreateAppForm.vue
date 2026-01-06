@@ -25,12 +25,12 @@ const emit = defineEmits<{
 
 // Form validation schema
 const formSchema = z.object({
-  name: z.string().min(1, 'App name is required'),
+  name: z.string().min(1, 'O nome do app é obrigatório'),
   slug: z.string()
-    .min(1, 'Slug is required')
-    .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens')
-    .regex(/^[a-z0-9]/, 'Slug must start with a letter or number')
-    .regex(/[a-z0-9]$/, 'Slug must end with a letter or number'),
+    .min(1, 'O slug é obrigatório')
+    .regex(/^[a-z0-9-]+$/, 'O slug pode conter apenas letras minúsculas, números e hífens')
+    .regex(/^[a-z0-9]/, 'O slug deve começar com uma letra ou número')
+    .regex(/[a-z0-9]$/, 'O slug deve terminar com uma letra ou número'),
   description: z.string().optional(),
 })
 
@@ -71,24 +71,24 @@ watch(() => values.name, (newName) => {
 <template>
   <Card>
     <CardHeader>
-      <CardTitle>App Information</CardTitle>
-      <CardDescription>Provide basic information about your application</CardDescription>
+      <CardTitle>Informações do App</CardTitle>
+      <CardDescription>Forneça informações básicas sobre o seu aplicativo</CardDescription>
     </CardHeader>
     <CardContent>
       <form class="space-y-6" @submit="onSubmit">
         <!-- App Name -->
         <FormField v-slot="{ componentField }" name="name">
           <FormItem>
-            <FormLabel class="required">App Name</FormLabel>
+            <FormLabel class="required">Nome do App</FormLabel>
             <FormControl>
               <Input
                 v-bind="componentField"
-                placeholder="My Awesome App"
+                placeholder="Meu App Incrível"
                 :disabled="isSubmitting || _props.loading"
               />
             </FormControl>
             <FormDescription>
-              The display name for your application
+              O nome de exibição do seu aplicativo
             </FormDescription>
             <FormMessage />
           </FormItem>
@@ -101,12 +101,12 @@ watch(() => values.name, (newName) => {
             <FormControl>
               <Input
                 v-bind="componentField"
-                placeholder="my-awesome-app"
+                placeholder="meu-app-incrivel"
                 :disabled="isSubmitting || _props.loading"
               />
             </FormControl>
             <FormDescription>
-              Used in API URLs and as bundle identifier. Only lowercase letters, numbers, and hyphens allowed.
+              Usado nas URLs da API e como identificador. Apenas letras minúsculas, números e hífens são permitidos.
             </FormDescription>
             <FormMessage />
           </FormItem>
@@ -115,17 +115,17 @@ watch(() => values.name, (newName) => {
         <!-- Description -->
         <FormField v-slot="{ componentField }" name="description">
           <FormItem>
-            <FormLabel>Description</FormLabel>
+            <FormLabel>Descrição</FormLabel>
             <FormControl>
               <Textarea
                 v-bind="componentField"
-                placeholder="A brief description of your app..."
+                placeholder="Uma breve descrição do seu app..."
                 rows="3"
                 :disabled="isSubmitting || _props.loading"
               />
             </FormControl>
             <FormDescription>
-              Optional description to help you identify this app
+              Descrição opcional para ajudar você a identificar este app
             </FormDescription>
             <FormMessage />
           </FormItem>
@@ -140,10 +140,10 @@ watch(() => values.name, (newName) => {
           >
             <Icon v-if="isSubmitting || _props.loading" name="lucide:loader-2" class="size-4 mr-2 animate-spin" />
             <Icon name="lucide:plus" class="size-4 mr-2" />
-            Create App
+            Criar App
           </Button>
           <Button type="button" variant="outline" @click="$emit('cancel')">
-            Cancel
+            Cancelar
           </Button>
         </div>
       </form>

@@ -194,7 +194,7 @@ class FCMProvider {
     }
   }
 
-  async sendMessage(message: FCMMessage): Promise<{ success: boolean, messageId?: string, error?: string }> {
+  async sendMessage(message: FCMMessage): Promise<{ success: boolean, messageId?: string, error?: string, statusCode?: number }> {
     try {
       const accessToken = await this.getAccessToken()
 
@@ -214,12 +214,14 @@ class FCMProvider {
         return {
           success: false,
           error: data.error?.message || `HTTP ${response.status}: ${response.statusText}`,
+          statusCode: response.status,
         }
       }
 
       return {
         success: true,
         messageId: data.name,
+        statusCode: response.status,
       }
     }
     catch (error) {
@@ -268,8 +270,8 @@ class FCMProvider {
   convertNotificationPayload(payload: NotificationPayload, deviceToken: string, notificationId?: string, deviceId?: string): FCMMessage {
     const baseData = payload.data
       ? Object.fromEntries(
-          Object.entries(payload.data).map(([key, value]) => [key, String(value)]),
-        )
+        Object.entries(payload.data).map(([key, value]) => [key, String(value)]),
+      )
       : {}
 
     // Add tracking data

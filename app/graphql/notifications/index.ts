@@ -1,11 +1,11 @@
 import { useMutation, useQuery } from '@pinia/colada'
 
 // Notification queries
-export function useNotificationApi(appId: Ref<string> | string) {
+export function useNotificationApi(appId: Ref<string> | string, filter?: MaybeRef<{ isAutomation?: boolean }>) {
   return useQuery({
-    key: () => ['notifications', unref(appId)],
+    key: () => ['notifications', unref(appId), unref(filter)],
     query: async () => {
-      const result = await $sdk.notifications({ appId: unref(appId) })
+      const result = await $sdk.notifications({ appId: unref(appId), filter: unref(filter) })
       return result.data?.notifications || []
     },
   })

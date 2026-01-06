@@ -13,9 +13,10 @@ const appId = computed(() => route.params.id as string)
 // API queries
 const { data: appData } = useApp(appId)
 const app = computed(() => appData.value)
+const push = useToast()
 
 // Reactive data
-const stats = computed(() => (app as any)?.stats || {
+const stats = computed(() => app.value?.stats || {
   totalDevices: 0,
   newDevicesToday: 0,
   sentToday: 0,
@@ -33,19 +34,19 @@ function _initializeRecentActivity() {
     {
       id: 1,
       type: 'notification',
-      message: 'Notification sent to 150 devices',
+      message: 'Notificação enviada para 150 dispositivos',
       timestamp: new Date(Date.now() - 1000 * 60 * 30),
     },
     {
       id: 2,
       type: 'device',
-      message: '5 new devices registered',
+      message: '5 novos dispositivos registrados',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
     },
     {
       id: 3,
       type: 'config',
-      message: 'FCM configuration updated',
+      message: 'Configuração FCM atualizada',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6),
     },
   ]
@@ -61,7 +62,7 @@ function getActivityColor(type: string) {
 }
 
 function formatTime(timestamp: Date) {
-  return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+  return new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' }).format(
     Math.round((timestamp.getTime() - Date.now()) / (1000 * 60)),
     'minute',
   )
@@ -71,7 +72,7 @@ async function copyApiKey() {
   try {
     await navigator.clipboard.writeText((app as any).value?.apiKey || '')
 
-    push.success('API key copied to clipboard!')
+    push.success('Chave de API copiada para a área de transferência!')
 
     isApiKeyCopied.value = true
 
@@ -103,47 +104,47 @@ onMounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">Total Devices</CardTitle>
+            <CardTitle class="text-sm font-medium">Total de Dispositivos</CardTitle>
             <Icon name="lucide:smartphone" class="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ stats.totalDevices }}</div>
             <p class="text-xs text-muted-foreground">
-              <span class="text-green-600">+{{ stats.newDevicesToday }}</span> today
+              <span class="text-green-600">+{{ stats.newDevicesToday }}</span> hoje
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">Notifications Sent</CardTitle>
+            <CardTitle class="text-sm font-medium">Notificações Enviadas</CardTitle>
             <Icon name="lucide:send" class="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ stats.sentToday }}</div>
-            <p class="text-xs text-muted-foreground">Last 24 hours</p>
+            <p class="text-xs text-muted-foreground">Últimas 24 horas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">Delivery Rate</CardTitle>
+            <CardTitle class="text-sm font-medium">Taxa de Entrega</CardTitle>
             <Icon name="lucide:trending-up" class="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.deliveryRate }}%</div>
-            <p class="text-xs text-muted-foreground">Last 24 hours</p>
+            <div class="text-2xl font-bold">{{ Number(stats.deliveryRate).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) }}%</div>
+            <p class="text-xs text-muted-foreground">Últimas 24 horas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">API Calls</CardTitle>
+            <CardTitle class="text-sm font-medium">Chamadas de API</CardTitle>
             <Icon name="lucide:activity" class="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ stats.apiCalls }}</div>
-            <p class="text-xs text-muted-foreground">Last 24 hours</p>
+            <p class="text-xs text-muted-foreground">Últimas 24 horas</p>
           </CardContent>
         </Card>
       </div>
@@ -151,8 +152,8 @@ onMounted(() => {
       <!-- API Key -->
       <Card>
         <CardHeader>
-          <CardTitle>API Key</CardTitle>
-          <CardDescription>Use this key to authenticate API requests for this app</CardDescription>
+          <CardTitle>Chave de API</CardTitle>
+          <CardDescription>Use esta chave para autenticar requisições de API para este aplicativo</CardDescription>
         </CardHeader>
         <CardContent>
           <div class="flex items-center space-x-2">
@@ -180,7 +181,7 @@ onMounted(() => {
       <!-- Recent Activity -->
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>Atividade Recente</CardTitle>
         </CardHeader>
         <CardContent>
           <div class="space-y-4">

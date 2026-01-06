@@ -21,6 +21,15 @@ type NotificationTemplate {
   delayMinutes: Int! # Delay em minutos após o push anterior (0 para o primeiro)
 }
 
+type AutomationStats {
+  sent: Int!
+  delivered: Int!
+  failed: Int!
+  clicks: Int!
+  ctr: Float
+  deliveryRate: Float
+}
+
 type Automation {
   id: ID!
   appId: ID!
@@ -32,6 +41,9 @@ type Automation {
   
   # Templates das notificações (array de pushes na sequência)
   notificationTemplates: [NotificationTemplate!]!
+  
+  # Stats agregados
+  stats: AutomationStats!
   
   # Para automação RECURRING
   frequency: AutomationFrequency

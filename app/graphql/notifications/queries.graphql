@@ -1,5 +1,5 @@
-query notifications($appId: ID) {
-  notifications(appId: $appId) {
+query notifications($appId: ID, $filter: NotificationFilterInput) {
+  notifications(appId: $appId, filter: $filter) {
     id
     appId
     title
@@ -19,6 +19,7 @@ query notifications($appId: ID) {
     totalDelivered
     totalFailed
     totalClicked
+    automationId
     createdAt
     updatedAt
     sentAt
@@ -45,6 +46,7 @@ query notification($id: ID!) {
     totalDelivered
     totalFailed
     totalClicked
+    automationId
     createdAt
     updatedAt
     sentAt

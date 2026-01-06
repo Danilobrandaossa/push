@@ -73,12 +73,12 @@ async function sendTest() {
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
       <div>
-        <h1 class="text-3xl font-bold mb-2">Applications</h1>
-        <p class="text-muted-foreground">Manage your push notification applications</p>
+        <h1 class="text-3xl font-bold mb-2">Aplicativos</h1>
+        <p class="text-muted-foreground">Gerencie seus aplicativos de notificações push</p>
       </div>
       <Button @click="navigateTo('/apps/create')">
         <Icon name="lucide:plus" class="mr-2 size-4" />
-        Create App
+        Criar App
       </Button>
     </div>
 
@@ -97,7 +97,7 @@ async function sendTest() {
               </div>
             </div>
             <Badge :variant="app.isActive ? 'default' : 'secondary'">
-              {{ app.isActive ? 'Active' : 'Inactive' }}
+              {{ app.isActive ? 'Ativo' : 'Inativo' }}
             </Badge>
           </div>
           <CardDescription v-if="app.description">{{ app.description }}</CardDescription>
@@ -108,18 +108,18 @@ async function sendTest() {
             <!-- Quick Stats -->
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p class="text-muted-foreground">Devices</p>
+                <p class="text-muted-foreground">Dispositivos</p>
                 <p class="font-semibold">{{ app.stats?.totalDevices || 0 }}</p>
               </div>
               <div>
-                <p class="text-muted-foreground">Sent Today</p>
+                <p class="text-muted-foreground">Enviados Hoje</p>
                 <p class="font-semibold">{{ app.stats?.sentToday || 0 }}</p>
               </div>
             </div>
 
             <!-- Provider Status -->
             <div class="space-y-2">
-              <p class="text-sm font-medium">Configured Providers</p>
+              <p class="text-sm font-medium">Provedores Configurados</p>
               <div class="flex space-x-2">
                 <Badge v-if="app.fcmProjectId" variant="outline" class="text-xs">
                   <Icon name="lucide:smartphone" class="w-3 h-3 mr-1" />
@@ -134,7 +134,7 @@ async function sendTest() {
                   Web Push
                 </Badge>
                 <Badge v-if="!app.fcmProjectId && !app.apnsKeyId && !app.vapidPublicKey" variant="secondary" class="text-xs">
-                  Not Configured
+                  Não Configurado
                 </Badge>
               </div>
             </div>
@@ -146,12 +146,12 @@ async function sendTest() {
             <Button variant="outline" size="sm" as-child class="flex-1">
               <NuxtLink :to="`/apps/${app.id}`">
                 <Icon name="lucide:settings" class="size-4 mr-2" />
-                Manage
+                Gerenciar
               </NuxtLink>
             </Button>
             <Button variant="outline" size="sm" @click="sendTestNotification(app)">
               <Icon name="lucide:send" class="size-4 mr-2" />
-              Test
+              Testar
             </Button>
           </div>
         </CardContent>
@@ -161,28 +161,28 @@ async function sendTest() {
     <!-- Loading State -->
     <div v-else-if="appsLoading" class="text-center py-12">
       <Icon name="lucide:loader-2" class="mx-auto h-12 w-12 text-muted-foreground mb-4 animate-spin" />
-      <h3 class="text-lg font-medium mb-2">Loading applications...</h3>
+      <h3 class="text-lg font-medium mb-2">Carregando aplicativos...</h3>
     </div>
 
     <!-- Error State -->
     <div v-else-if="appsError" class="text-center py-12">
       <Icon name="lucide:alert-circle" class="mx-auto h-12 w-12 text-destructive mb-4" />
-      <h3 class="text-lg font-medium mb-2 text-destructive">Error loading applications</h3>
-      <p class="text-muted-foreground mb-6">{{ appsError.message || 'An error occurred while loading applications' }}</p>
+      <h3 class="text-lg font-medium mb-2 text-destructive">Erro ao carregar aplicativos</h3>
+      <p class="text-muted-foreground mb-6">{{ appsError.message || 'Ocorreu um erro ao carregar os aplicativos' }}</p>
       <Button @click="window.location.reload()">
         <Icon name="lucide:refresh-cw" class="mr-2 size-4" />
-        Retry
+        Tentar novamente
       </Button>
     </div>
 
     <!-- Empty State -->
     <div v-else class="text-center py-12">
       <Icon name="lucide:package" class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-      <h3 class="text-lg font-medium mb-2">No applications yet</h3>
-      <p class="text-muted-foreground mb-6">Create your first app to start sending push notifications</p>
+      <h3 class="text-lg font-medium mb-2">Nenhum aplicativo ainda</h3>
+      <p class="text-muted-foreground mb-6">Crie seu primeiro app para começar a enviar notificações push</p>
       <Button @click="navigateTo('/apps/create')">
         <Icon name="lucide:plus" class="mr-2 size-4" />
-        Create Your First App
+        Criar Seu Primeiro App
       </Button>
     </div>
 
@@ -190,38 +190,38 @@ async function sendTest() {
     <Dialog v-model:open="showTestDialog">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Send Test Notification</DialogTitle>
-          <DialogDescription>Send a test notification to {{ (selectedApp as any)?.name }}</DialogDescription>
+          <DialogTitle>Enviar Notificação de Teste</DialogTitle>
+          <DialogDescription>Envie uma notificação de teste para {{ (selectedApp as any)?.name }}</DialogDescription>
         </DialogHeader>
 
         <form class="space-y-4" @submit.prevent="sendTest">
           <div class="space-y-2">
-            <Label for="test-title">Title *</Label>
+            <Label for="test-title">Título *</Label>
             <Input
               id="test-title"
               v-model="testNotification.title"
-              placeholder="Hello World!"
+              placeholder="Olá Mundo!"
               required
             />
           </div>
 
           <div class="space-y-2">
-            <Label for="test-body">Message *</Label>
+            <Label for="test-body">Mensagem *</Label>
             <Textarea
               id="test-body"
               v-model="testNotification.body"
-              placeholder="This is a test notification"
+              placeholder="Esta é uma notificação de teste"
               required
               rows="3"
             />
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" @click="showTestDialog = false">Cancel</Button>
+            <Button type="button" variant="outline" @click="showTestDialog = false">Cancelar</Button>
             <Button type="submit" :disabled="!testNotification.title || !testNotification.body || testLoading">
               <Icon v-if="testLoading" name="lucide:loader-2" class="size-4 mr-2 animate-spin" />
               <Icon name="lucide:send" class="size-4 mr-2" />
-              Send Test
+              Enviar Teste
             </Button>
           </DialogFooter>
         </form>

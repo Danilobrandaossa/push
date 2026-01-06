@@ -169,9 +169,38 @@ const deviceStats = computed(() => {
   return stats
 })
 
+// 7-day registration chart data
+const registrationChartData = computed(() => {
+  const last7Days = []
+  const today = new Date()
+  
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today)
+    date.setDate(date.getDate() - i)
+    date.setHours(0, 0, 0, 0)
+    
+    const nextDate = new Date(date)
+    nextDate.setDate(nextDate.getDate() + 1)
+    
+    const count = devices.value.filter(device => {
+      const deviceDate = new Date(device.createdAt)
+      return deviceDate >= date && deviceDate < nextDate
+    }).length
+    
+    last7Days.push({
+      date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+      count,
+      fullDate: date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+    })
+  }
+  
+  const maxCount = Math.max(...last7Days.map(d => d.count), 1)
+  return { days: last7Days, maxCount }
+})
+
 function formatLastSeen(date: string | null | undefined) {
   if (!date)
-    return 'Never'
+    return 'Nunca'
   const now = new Date()
   const lastSeen = new Date(date)
   const diffMs = now.getTime() - lastSeen.getTime()
@@ -180,14 +209,14 @@ function formatLastSeen(date: string | null | undefined) {
   const diffMinutes = Math.floor(diffMs / (1000 * 60))
 
   if (diffMinutes < 1)
-    return 'Just now'
+    return 'Agora mesmo'
   if (diffMinutes < 60)
-    return `${diffMinutes}m ago`
+    return `há ${diffMinutes}m`
   if (diffHours < 24)
-    return `${diffHours}h ago`
+    return `há ${diffHours}h`
   if (diffDays === 1)
-    return 'Yesterday'
-  return `${diffDays}d ago`
+    return 'Ontem'
+  return `há ${diffDays}d`
 }
 
 function getPlatformIcon(category: string | null, platform: string, metadata?: string) {
@@ -265,7 +294,7 @@ function getPlatformDescription(platform: string, metadata?: string): string {
       return 'Web Push API'
     }
     default:
-      return 'Unknown platform'
+      return 'Plataforma desconhecida'
   }
 }
 
@@ -283,7 +312,7 @@ function getTokenType(platform: string): string {
 }
 
 function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('pt-BR', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -334,7 +363,7 @@ function getBasePlatformName(platform: string): string {
     case 'WEB':
       return 'Web'
     default:
-      return 'Unknown'
+      return 'Desconhecido'
   }
 }
 
@@ -385,7 +414,7 @@ function getBrowserDisplayName(category: string | null, platform: string, metada
           // ignore
         }
       }
-      return 'Web Browser'
+      return 'Navegador Web'
     }
   }
 
@@ -396,7 +425,7 @@ function getBrowserDisplayName(category: string | null, platform: string, metada
     case 'ANDROID':
       return 'Android'
     default:
-      return platform || 'Unknown'
+      return platform || 'Desconhecido'
   }
 }
 
@@ -456,17 +485,17 @@ function refreshDevices() {
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-2xl font-bold mb-2">Registered Devices</h2>
-          <p class="text-muted-foreground">Manage devices that can receive push notifications.</p>
+          <h2 class="text-2xl font-bold mb-2">Dispositivos Registrados</h2>
+          <p class="text-muted-foreground">Gerencie os dispositivos que podem receber notificações push.</p>
         </div>
         <div class="flex space-x-2">
           <Button variant="outline" :disabled="devicesLoading" @click="refreshDevices">
             <Icon name="lucide:refresh-cw" class="mr-2 size-4" :class="{ 'animate-spin': devicesLoading }" />
-            Refresh
+            Atualizar
           </Button>
           <Button @click="showRegisterDevice = true">
             <Icon name="lucide:plus" class="mr-2 size-4" />
-            Register Device
+            Registrar Dispositivo
           </Button>
         </div>
       </div>
@@ -475,7 +504,7 @@ function refreshDevices() {
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">Total Devices</CardTitle>
+            <CardTitle class="text-sm font-medium">Total de Dispositivos</CardTitle>
             <Icon name="lucide:smartphone" class="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -488,33 +517,33 @@ function refreshDevices() {
 
         <Card>
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">Active Devices</CardTitle>
+            <CardTitle class="text-sm font-medium">Dispositivos Ativos</CardTitle>
             <Icon name="lucide:check-circle" class="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ deviceStats.active }}</div>
             <div class="text-xs text-muted-foreground mt-1">
-              {{ Math.round((deviceStats.active / deviceStats.total) * 100) || 0 }}% active rate
+              Taxa de atividade: {{ Math.round((deviceStats.active / deviceStats.total) * 100) || 0 }}%
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">Seen Today</CardTitle>
+            <CardTitle class="text-sm font-medium">Vistos Hoje</CardTitle>
             <Icon name="lucide:refresh-cw" class="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ deviceStats.seenToday }}</div>
             <div class="text-xs text-muted-foreground mt-1">
-              Last 24 hours
+              Nas últimas 24 horas
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">Platform Mix</CardTitle>
+            <CardTitle class="text-sm font-medium">Mix de Plataformas</CardTitle>
             <Icon name="lucide:smartphone" class="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -528,7 +557,7 @@ function refreshDevices() {
                 <span class="font-medium">{{ deviceStats.android }}</span>
               </div>
               <div class="flex justify-between text-sm">
-                <span class="flex items-center"><span class="mr-1">🌐</span>Web Total</span>
+                <span class="flex items-center"><span class="mr-1">🌐</span>Total Web</span>
                 <span class="font-medium">{{ deviceStats.web }}</span>
               </div>
               <!-- Browser breakdown -->
@@ -553,13 +582,140 @@ function refreshDevices() {
                 <span>{{ deviceStats.opera }}</span>
               </div>
               <div v-if="deviceStats.unknownWeb > 0" class="flex justify-between text-xs text-muted-foreground pl-4">
-                <span class="flex items-center"><span class="mr-1">❓</span>Other</span>
+                <span class="flex items-center"><span class="mr-1">❓</span>Outros</span>
                 <span>{{ deviceStats.unknownWeb }}</span>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <!-- 7-Day Registration Chart -->
+      <Card class="overflow-hidden">
+        <CardHeader class="pb-2">
+          <CardTitle class="text-lg font-semibold tracking-tight">Registros de Dispositivos (7 Dias)</CardTitle>
+          <CardDescription>Visualização da atividade de registro na última semana</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div class="h-[240px] w-full mt-4">
+            <div class="relative h-full w-full">
+              <!-- Grid Background -->
+              <div class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 pt-2 px-2">
+                <div v-for="i in 5" :key="i" class="border-t border-muted/30 w-full h-0"></div>
+              </div>
+
+              <!-- SVG Area Chart -->
+              <svg class="absolute inset-0 w-full h-full pb-8 pt-2 px-2 overflow-visible" viewBox="0 0 700 200" preserveAspectRatio="none">
+                <!-- Gradient Definitions -->
+                <defs>
+                  <linearGradient id="sophisticatedAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:rgb(79, 70, 229);stop-opacity:0.35" />
+                    <stop offset="60%" style="stop-color:rgb(147, 51, 234);stop-opacity:0.15" />
+                    <stop offset="100%" style="stop-color:rgb(236, 72, 153);stop-opacity:0" />
+                  </linearGradient>
+                  <linearGradient id="sophisticatedLineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:rgb(79, 70, 229);stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:rgb(147, 51, 234);stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:rgb(236, 72, 153);stop-opacity:1" />
+                  </linearGradient>
+                </defs>
+                
+                <!-- Area Path with Smoothing -->
+                <path
+                  :d="(() => {
+                    if (registrationChartData.days.length < 2) return ''
+                    const width = 700
+                    const height = 200
+                    const stepX = width / (registrationChartData.days.length - 1)
+                    
+                    const points = registrationChartData.days.map((day, i) => ({
+                      x: i * stepX,
+                      y: height - ((day.count / (registrationChartData.maxCount || 1)) * height)
+                    }))
+                    
+                    let d = `M ${points[0].x} ${points[0].y}`
+                    
+                    for (let i = 0; i < points.length - 1; i++) {
+                      const p0 = points[i]
+                      const p1 = points[i + 1]
+                      const cp1x = p0.x + (p1.x - p0.x) / 3
+                      const cp2x = p0.x + 2 * (p1.x - p0.x) / 3
+                      d += ` C ${cp1x} ${p0.y}, ${cp2x} ${p1.y}, ${p1.x} ${p1.y}`
+                    }
+                    
+                    const last = points[points.length - 1]
+                    d += ` L ${last.x} ${height} L ${points[0].x} ${height} Z`
+                    return d
+                  })()"
+                  fill="url(#sophisticatedAreaGradient)"
+                  class="transition-all duration-700 ease-in-out"
+                />
+                
+                <!-- Line Path with Smoothing -->
+                <path
+                  :d="(() => {
+                    if (registrationChartData.days.length < 2) return ''
+                    const width = 700
+                    const height = 200
+                    const stepX = width / (registrationChartData.days.length - 1)
+                    
+                    const points = registrationChartData.days.map((day, i) => ({
+                      x: i * stepX,
+                      y: height - ((day.count / (registrationChartData.maxCount || 1)) * height)
+                    }))
+                    
+                    let d = `M ${points[0].x} ${points[0].y}`
+                    
+                    for (let i = 0; i < points.length - 1; i++) {
+                      const p0 = points[i]
+                      const p1 = points[i + 1]
+                      const cp1x = p0.x + (p1.x - p0.x) / 3
+                      const cp2x = p0.x + 2 * (p1.x - p0.x) / 3
+                      d += ` C ${cp1x} ${p0.y}, ${cp2x} ${p1.y}, ${p1.x} ${p1.y}`
+                    }
+                    
+                    return d
+                  })()"
+                  fill="none"
+                  stroke="url(#sophisticatedLineGradient)"
+                  stroke-width="3.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="transition-all duration-700 ease-in-out"
+                />
+              </svg>
+              
+              <!-- Labels -->
+              <div class="absolute bottom-0 left-0 right-0 flex justify-between px-2 pt-2">
+                <div v-for="day in registrationChartData.days" :key="day.date" class="flex-1 flex flex-col items-center">
+                  <div class="h-1 w-px bg-muted-foreground/30 mb-1"></div>
+                  <div class="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-wider">{{ day.date }}</div>
+                </div>
+              </div>
+              
+              <!-- Value Tooltips (Visible on data peaks) -->
+              <div class="absolute top-0 left-0 right-0 flex justify-between px-2 pointer-events-none">
+                <div v-for="(day, i) in registrationChartData.days" :key="i" class="flex-1 flex justify-center">
+                  <div 
+                    v-if="day.count > 0"
+                    class="group relative"
+                    :style="{ transform: `translateY(${(1 - (day.count / (registrationChartData.maxCount || 1))) * 200 - 15}px)` }"
+                  >
+                    <div class="px-2 py-0.5 rounded-full bg-background border shadow-sm text-[10px] font-bold text-primary transition-all duration-300">
+                      {{ day.count }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-8 flex items-center justify-center space-x-2 text-xs text-muted-foreground font-medium">
+            <div class="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+            <span>Total de {{ registrationChartData.days.reduce((sum, d) => sum + d.count, 0) }} dispositivos registrados nos últimos 7 dias</span>
+          </div>
+        </CardContent>
+      </Card>
 
       <!-- Filters -->
       <Card>
@@ -570,18 +726,18 @@ function refreshDevices() {
                 <Icon name="lucide:search" class="absolute left-3 top-3 size-4 text-muted-foreground" />
                 <Input
                   v-model="searchQuery"
-                  placeholder="Search devices by token, platform, or user ID..."
+                  placeholder="Buscar dispositivos por token, plataforma ou ID de usuário..."
                   class="pl-10"
                 />
               </div>
             </div>
             <Select v-model="selectedPlatform">
               <SelectTrigger class="w-full sm:w-48">
-                <SelectValue placeholder="All platforms" />
+                <SelectValue placeholder="Todas as plataformas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All platforms</SelectItem>
-                <SelectItem value="WEB">🌐 All Web</SelectItem>
+                <SelectItem value="all">Todas as plataformas</SelectItem>
+                <SelectItem value="WEB">🌐 Todas Web</SelectItem>
                 <SelectItem value="CHROME">🌐 Chrome</SelectItem>
                 <SelectItem value="FIREFOX">🦊 Firefox</SelectItem>
                 <SelectItem value="SAFARI">🧭 Safari</SelectItem>
@@ -598,7 +754,7 @@ function refreshDevices() {
       <!-- Devices Table -->
       <Card>
         <CardHeader>
-          <CardTitle>Devices ({{ filteredDevices.length }})</CardTitle>
+          <CardTitle>Dispositivos ({{ filteredDevices.length }})</CardTitle>
         </CardHeader>
         <CardContent>
           <div v-if="devicesLoading" class="flex items-center justify-center py-8">
@@ -607,20 +763,20 @@ function refreshDevices() {
 
           <div v-else-if="filteredDevices.length === 0" class="text-center py-8 text-muted-foreground">
             <Icon name="lucide:smartphone" class="mx-auto h-12 w-12 mb-4 opacity-50" />
-            <p class="text-lg font-medium mb-2">No devices found</p>
-            <p class="text-sm">{{ devices.length === 0 ? 'Register your first device to get started.' : 'Try adjusting your search filters.' }}</p>
+            <p class="text-lg font-medium mb-2">Nenhum dispositivo encontrado</p>
+            <p class="text-sm">{{ devices.length === 0 ? 'Registre seu primeiro dispositivo para começar.' : 'Tente ajustar seus filtros de busca.' }}</p>
           </div>
 
           <Table v-else>
             <TableHeader>
               <TableRow>
-                <TableHead class="w-[180px]">Platform</TableHead>
-                <TableHead class="w-[120px]">Browser/OS</TableHead>
+                <TableHead class="w-[180px]">Plataforma</TableHead>
+                <TableHead class="w-[120px]">Navegador/OS</TableHead>
                 <TableHead>Token</TableHead>
-                <TableHead>User ID</TableHead>
+                <TableHead>ID de Usuário</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Last Seen</TableHead>
-                <TableHead class="w-[100px]">Actions</TableHead>
+                <TableHead>Visto por último</TableHead>
+                <TableHead class="w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -660,32 +816,32 @@ function refreshDevices() {
                 <TableCell>
                   <div v-if="device.userId" class="flex items-center space-x-1">
                     <span class="text-sm font-medium">{{ device.userId }}</span>
-                    <Badge variant="outline" class="text-[10px] px-1">User</Badge>
+                    <Badge variant="outline" class="text-[10px] px-1">Usuário</Badge>
                   </div>
                   <div v-else class="flex items-center space-x-1">
-                    <span class="text-muted-foreground text-sm">Anonymous</span>
-                    <Badge variant="secondary" class="text-[10px] px-1">Guest</Badge>
+                    <span class="text-muted-foreground text-sm">Anônimo</span>
+                    <Badge variant="secondary" class="text-[10px] px-1">Visitante</Badge>
                   </div>
                 </TableCell>
                 <TableCell>
                   <Badge :variant="device.status === 'ACTIVE' ? 'default' : 'secondary'" class="flex items-center space-x-1">
                     <Icon v-if="device.status === 'ACTIVE'" name="lucide:check-circle" class="h-3 w-3" />
                     <Icon v-else name="lucide:x-circle" class="h-3 w-3" />
-                    <span>{{ device.status === 'ACTIVE' ? 'Active' : 'Inactive' }}</span>
+                    <span>{{ device.status === 'ACTIVE' ? 'Ativo' : 'Inativo' }}</span>
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <div class="text-sm">
                     <div class="font-medium">{{ formatLastSeen(device.lastSeenAt) }}</div>
                     <div class="text-xs text-muted-foreground">
-                      {{ device.createdAt ? formatDate(new Date(device.createdAt)) : 'Unknown' }}
+                      {{ device.createdAt ? formatDate(new Date(device.createdAt)) : 'Desconhecido' }}
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div class="flex space-x-1">
                     <Button variant="ghost" size="sm" class="h-7 px-2" @click="deleteDevice(device.id)">
-                      Delete
+                      Excluir
                     </Button>
                   </div>
                 </TableCell>
@@ -700,21 +856,21 @@ function refreshDevices() {
     <Dialog v-model:open="showRegisterDevice">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Register New Device</DialogTitle>
-          <DialogDescription>Add a new device to receive push notifications</DialogDescription>
+          <DialogTitle>Registrar Novo Dispositivo</DialogTitle>
+          <DialogDescription>Adicione um novo dispositivo para receber notificações push</DialogDescription>
         </DialogHeader>
         <form class="space-y-4" @submit.prevent="registerDevice">
           <div class="space-y-2">
-            <Label for="device-token">Device Token *</Label>
+            <Label for="device-token">Token do Dispositivo *</Label>
             <Input
               id="device-token"
               v-model="deviceForm.token"
-              placeholder="Device push token..."
+              placeholder="Token de push do dispositivo..."
               required
             />
           </div>
           <div class="space-y-2">
-            <Label for="device-platform">Platform *</Label>
+            <Label for="device-platform">Plataforma *</Label>
             <Select v-model="deviceForm.platform" required>
               <SelectTrigger>
                 <SelectValue />
@@ -727,7 +883,7 @@ function refreshDevices() {
             </Select>
           </div>
           <div class="space-y-2">
-            <Label for="device-user-id">User ID (Optional)</Label>
+            <Label for="device-user-id">ID de Usuário (Opcional)</Label>
             <Input
               id="device-user-id"
               v-model="deviceForm.userId"
@@ -736,10 +892,10 @@ function refreshDevices() {
           </div>
         </form>
         <DialogFooter>
-          <Button variant="outline" @click="showRegisterDevice = false">Cancel</Button>
+          <Button variant="outline" @click="showRegisterDevice = false">Cancelar</Button>
           <Button :disabled="isRegisteringDevice || !deviceForm.token" @click="registerDevice">
             <Icon v-if="isRegisteringDevice" name="lucide:loader-2" class="mr-2 size-4 animate-spin" />
-            Register Device
+            Registrar Dispositivo
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -749,26 +905,26 @@ function refreshDevices() {
     <Dialog v-model:open="showDeleteDialog">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Device</DialogTitle>
+          <DialogTitle>Excluir Dispositivo</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this device? This action cannot be undone.
+            Tem certeza que deseja excluir este dispositivo? Esta ação não pode ser desfeita.
           </DialogDescription>
         </DialogHeader>
         <div class="space-y-4">
           <Alert variant="destructive">
             <Icon name="lucide:alert-triangle" class="size-4" />
-            <AlertTitle>Warning</AlertTitle>
+            <AlertTitle>Aviso</AlertTitle>
             <AlertDescription>
-              This device will no longer receive push notifications. All associated data will be permanently deleted.
+              Este dispositivo não receberá mais notificações push. Todos os dados associados serão excluídos permanentemente.
             </AlertDescription>
           </Alert>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showDeleteDialog = false">Cancel</Button>
+          <Button variant="outline" @click="showDeleteDialog = false">Cancelar</Button>
           <Button variant="destructive" :disabled="isDeletingDevice" @click="confirmDeleteDevice">
             <Icon v-if="isDeletingDevice" name="lucide:loader-2" class="mr-2 size-4 animate-spin" />
             <Icon v-else name="lucide:trash-2" class="mr-2 size-4" />
-            Delete Device
+            Excluir Dispositivo
           </Button>
         </DialogFooter>
       </DialogContent>

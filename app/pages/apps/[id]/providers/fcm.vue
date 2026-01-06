@@ -25,8 +25,8 @@ const { mutateAsync: configureFCMMutation, isLoading: isConfiguring } = useConfi
 
 // Form validation schema
 const formSchema = z.object({
-  projectId: z.string().min(1, 'Project ID is required'),
-  serviceAccount: z.string().min(1, 'Service account JSON is required').refine(
+  projectId: z.string().min(1, 'ID do Projeto é obrigatório'),
+  serviceAccount: z.string().min(1, 'JSON da conta de serviço é obrigatório').refine(
     (val) => {
       try {
         const parsed = JSON.parse(val)
@@ -36,7 +36,7 @@ const formSchema = z.object({
         return false
       }
     },
-    'Invalid service account JSON format',
+    'Formato JSON da conta de serviço inválido',
   ),
 })
 
@@ -147,8 +147,8 @@ const serviceAccountInfo = computed(() => {
         <Icon name="lucide:arrow-left" class="size-4" />
       </Button>
       <div>
-        <h1 class="text-3xl font-bold mb-1">Configure Firebase FCM</h1>
-        <p class="text-muted-foreground">Set up push notifications for Android devices</p>
+        <h1 class="text-3xl font-bold mb-1">Configurar Firebase FCM</h1>
+        <p class="text-muted-foreground">Configure notificações push para dispositivos Android</p>
       </div>
     </div>
 
@@ -159,14 +159,14 @@ const serviceAccountInfo = computed(() => {
         <CardHeader>
           <CardTitle class="flex items-center space-x-2">
             <Icon name="lucide:check" class="h-5 w-5 text-green-600" />
-            <span>FCM Currently Configured</span>
+            <span>FCM Atualmente Configurado</span>
           </CardTitle>
-          <CardDescription>Your app is currently set up to send push notifications to Android devices</CardDescription>
+          <CardDescription>Seu app está configurado para enviar notificações push para Android</CardDescription>
         </CardHeader>
         <CardContent>
           <div class="space-y-2">
             <p class="text-sm"><strong>Project ID:</strong> {{ app.fcmProjectId }}</p>
-            <p class="text-sm text-muted-foreground">Service account credentials are securely stored and encrypted.</p>
+            <p class="text-sm text-muted-foreground">As credenciais da conta de serviço estão armazenadas e criptografadas com segurança.</p>
           </div>
         </CardContent>
       </Card>
@@ -174,42 +174,42 @@ const serviceAccountInfo = computed(() => {
       <!-- Configuration Guide -->
       <Card>
         <CardHeader>
-          <CardTitle>Setup Guide</CardTitle>
-          <CardDescription>Follow these steps to get your FCM credentials from Firebase Console</CardDescription>
+          <CardTitle>Guia de Configuração</CardTitle>
+          <CardDescription>Siga estes passos para obter suas credenciais FCM no Console do Firebase</CardDescription>
         </CardHeader>
         <CardContent>
           <ol class="space-y-3 text-sm">
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">1</span>
               <div>
-                <p class="font-medium">Go to Firebase Console</p>
-                <p class="text-muted-foreground">Visit console.firebase.google.com and select your project</p>
+                <p class="font-medium">Vá para o Console do Firebase</p>
+                <p class="text-muted-foreground">Visite console.firebase.google.com e selecione seu projeto</p>
               </div>
             </li>
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">2</span>
               <div>
-                <p class="font-medium">Navigate to Project Settings</p>
-                <p class="text-muted-foreground">Click the gear icon and select "Project settings"</p>
+                <p class="font-medium">Navegue até Configurações do Projeto</p>
+                <p class="text-muted-foreground">Clique no ícone de engrenagem e selecione "Configurações do projeto"</p>
               </div>
             </li>
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">3</span>
               <div>
-                <p class="font-medium">Generate Firebase Admin SDK Key</p>
+                <p class="font-medium">Gere a Chave do SDK Admin do Firebase</p>
                 <div class="text-muted-foreground space-y-1">
-                  <p>• Click "Service accounts" tab</p>
-                  <p>• Find "Firebase Admin SDK" section</p>
-                  <p>• Click "Generate new private key" button</p>
-                  <p>• Confirm in the popup dialog</p>
+                  <p>• Clique na aba "Contas de serviço"</p>
+                  <p>• Encontre a seção "SDK Admin do Firebase"</p>
+                  <p>• Clique no botão "Gerar nova chave privada"</p>
+                  <p>• Confirme na caixa de diálogo</p>
                 </div>
               </div>
             </li>
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">4</span>
               <div>
-                <p class="font-medium">Download JSON file</p>
-                <p class="text-muted-foreground">Download the service account JSON file and upload it below</p>
+                <p class="font-medium">Baixe o arquivo JSON</p>
+                <p class="text-muted-foreground">Baixe o arquivo JSON da conta de serviço e faça o upload abaixo</p>
               </div>
             </li>
           </ol>
@@ -219,8 +219,8 @@ const serviceAccountInfo = computed(() => {
       <!-- Configuration Form -->
       <Card>
         <CardHeader>
-          <CardTitle>FCM Configuration</CardTitle>
-          <CardDescription>Enter your Firebase Cloud Messaging credentials</CardDescription>
+          <CardTitle>Configuração FCM</CardTitle>
+          <CardDescription>Insira suas credenciais do Firebase Cloud Messaging</CardDescription>
         </CardHeader>
         <CardContent>
           <form class="space-y-6" @submit="onSubmit">
@@ -231,12 +231,12 @@ const serviceAccountInfo = computed(() => {
                 <FormControl>
                   <Input
                     v-bind="componentField"
-                    placeholder="my-firebase-project"
+                    placeholder="meu-projeto-firebase"
                     :disabled="isSubmitting || isConfiguring"
                   />
                 </FormControl>
                 <FormDescription>
-                  Your Firebase project ID (automatically filled when you upload the service account file)
+                  Seu ID do projeto Firebase (preenchido automaticamente ao fazer upload do arquivo da conta de serviço)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -245,12 +245,12 @@ const serviceAccountInfo = computed(() => {
             <!-- Service Account JSON -->
             <FormField v-slot="{ componentField }" name="serviceAccount">
               <FormItem>
-                <FormLabel class="required">Service Account JSON</FormLabel>
+                <FormLabel class="required">JSON da Conta de Serviço</FormLabel>
                 <div class="space-y-3">
                   <!-- File Upload Button -->
                   <Button type="button" variant="outline" :disabled="isSubmitting || isConfiguring" @click="triggerFileUpload">
                     <Icon name="lucide:upload" class="mr-2 size-4" />
-                    Upload JSON File
+                    Carregar Arquivo JSON
                   </Button>
                   <input
                     ref="fileInput"
@@ -264,7 +264,7 @@ const serviceAccountInfo = computed(() => {
                   <FormControl>
                     <Textarea
                       v-bind="componentField"
-                      placeholder="{&quot;type&quot;: &quot;service_account&quot;, &quot;project_id&quot;: &quot;your-project&quot;, ...}"
+                      placeholder="{&quot;type&quot;: &quot;service_account&quot;, &quot;project_id&quot;: &quot;seu-projeto&quot;, ...}"
                       rows="12"
                       class="font-mono text-xs"
                       :disabled="isSubmitting || isConfiguring"
@@ -272,7 +272,7 @@ const serviceAccountInfo = computed(() => {
                   </FormControl>
                 </div>
                 <FormDescription>
-                  Upload the service account JSON file from Firebase Console or paste the content manually
+                  Faça upload do arquivo JSON da conta de serviço do Console do Firebase ou cole o conteúdo manualmente
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -281,22 +281,22 @@ const serviceAccountInfo = computed(() => {
             <!-- Service Account Info (if valid JSON) -->
             <Card v-if="serviceAccountInfo" class="bg-muted/50">
               <CardHeader>
-                <CardTitle class="text-sm">Service Account Information</CardTitle>
+                <CardTitle class="text-sm">Informações da Conta de Serviço</CardTitle>
               </CardHeader>
               <CardContent class="space-y-2 text-sm">
                 <p><strong>Project ID:</strong> {{ serviceAccountInfo.project_id }}</p>
                 <p><strong>Client Email:</strong> {{ serviceAccountInfo.client_email }}</p>
                 <p><strong>Private Key ID:</strong> {{ serviceAccountInfo.private_key_id?.substring(0, 8) }}...</p>
-                <p><strong>Type:</strong> {{ serviceAccountInfo.type }}</p>
+                <p><strong>Tipo:</strong> {{ serviceAccountInfo.type }}</p>
               </CardContent>
             </Card>
 
             <!-- Security Warning -->
             <Alert>
               <Icon name="lucide:alert-triangle" class="size-4" />
-              <AlertTitle>Security Notice</AlertTitle>
+              <AlertTitle>Aviso de Segurança</AlertTitle>
               <AlertDescription>
-                Your service account credentials will be encrypted and securely stored. Never share these credentials publicly or commit them to version control.
+                As credenciais da sua conta de serviço serão criptografadas e armazenadas com segurança. Nunca compartilhe essas credenciais publicamente ou as coloque no controle de versão.
               </AlertDescription>
             </Alert>
 
@@ -309,10 +309,10 @@ const serviceAccountInfo = computed(() => {
               >
                 <Icon v-if="isSubmitting || isConfiguring" name="lucide:loader-2" class="size-4 mr-2 animate-spin" />
                 <Icon v-else name="lucide:save" class="size-4 mr-2" />
-                {{ hasExistingConfig ? 'Update Configuration' : 'Save Configuration' }}
+                {{ hasExistingConfig ? 'Atualizar Configuração' : 'Salvar Configuração' }}
               </Button>
               <Button type="button" variant="outline" @click="goBack">
-                Cancel
+                Cancelar
               </Button>
             </div>
           </form>
@@ -322,7 +322,7 @@ const serviceAccountInfo = computed(() => {
       <!-- Additional Resources -->
       <Card>
         <CardHeader>
-          <CardTitle>Additional Resources</CardTitle>
+          <CardTitle>Recursos Adicionais</CardTitle>
         </CardHeader>
         <CardContent>
           <div class="space-y-3">
@@ -332,7 +332,7 @@ const serviceAccountInfo = computed(() => {
               class="flex items-center space-x-2 text-sm text-primary hover:underline"
             >
               <Icon name="lucide:file-text" class="size-4" />
-              <span>Firebase Cloud Messaging Documentation</span>
+              <span>Documentação Firebase Cloud Messaging</span>
             </a>
             <a
               href="https://console.firebase.google.com/"
@@ -340,7 +340,7 @@ const serviceAccountInfo = computed(() => {
               class="flex items-center space-x-2 text-sm text-primary hover:underline"
             >
               <Icon name="lucide:file-text" class="size-4" />
-              <span>Firebase Console</span>
+              <span>Console Firebase</span>
             </a>
             <a
               href="https://firebase.google.com/docs/cloud-messaging/auth-server"
@@ -348,7 +348,7 @@ const serviceAccountInfo = computed(() => {
               class="flex items-center space-x-2 text-sm text-primary hover:underline"
             >
               <Icon name="lucide:file-text" class="size-4" />
-              <span>Server Authentication Guide</span>
+              <span>Guia de Autenticação do Servidor</span>
             </a>
           </div>
         </CardContent>

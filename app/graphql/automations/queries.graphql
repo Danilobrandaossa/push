@@ -23,6 +23,14 @@ query automations($appId: ID) {
     startDate
     endDate
     nextRunAt
+    stats {
+      sent
+      delivered
+      failed
+      clicks
+      ctr
+      deliveryRate
+    }
     createdAt
     updatedAt
   }

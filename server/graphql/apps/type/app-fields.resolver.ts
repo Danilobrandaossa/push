@@ -139,15 +139,15 @@ export const appFieldsResolver = defineField({
           // Get delivery stats for rate calculation
           const deliveryStatsResult = await db
             .select({
-              totalSent: sql<number>`sum(${tables.notification.totalSent})`,
+              totalTargets: sql<number>`sum(${tables.notification.totalTargets})`,
               totalDelivered: sql<number>`sum(${tables.notification.totalDelivered})`,
             })
             .from(tables.notification)
             .where(eq(tables.notification.appId, parent.id))
 
-          const totalSent = deliveryStatsResult[0]?.totalSent || 0
+          const totalTargets = deliveryStatsResult[0]?.totalTargets || 0
           const totalDelivered = deliveryStatsResult[0]?.totalDelivered || 0
-          const deliveryRate = totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0
+          const deliveryRate = totalTargets > 0 ? (totalDelivered / totalTargets) * 100 : 0
 
           return {
             totalDevices: Number(totalDevicesResult[0]?.count) || 0,

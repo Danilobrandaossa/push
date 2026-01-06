@@ -56,17 +56,17 @@ const selectedApp = computed(() => {
 
 function getTargetDescription() {
   if (targetType.value === 'all')
-    return 'All devices'
+    return 'Todos os dispositivos'
   if (targetType.value === 'platform') {
     return selectedPlatforms.value.length > 0
       ? selectedPlatforms.value.join(', ')
-      : 'No platforms selected'
+      : 'Nenhuma plataforma selecionada'
   }
   if (targetType.value === 'devices') {
     const deviceCount = deviceIds.value.split('\n').filter(id => id.trim()).length
-    return `${deviceCount} specific devices`
+    return `${deviceCount} dispositivos específicos`
   }
-  return 'Unknown'
+  return 'Desconhecido'
 }
 
 function getTotalNotificationsCount() {
@@ -208,8 +208,8 @@ function resetForm() {
   <div>
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-3xl font-bold mb-2">Send Notification</h1>
-      <p class="text-muted-foreground">Send push notifications to your registered devices</p>
+      <h1 class="text-3xl font-bold mb-2">Enviar Notificação</h1>
+      <p class="text-muted-foreground">Envie notificações push para seus dispositivos registrados</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -217,16 +217,16 @@ function resetForm() {
       <div class="lg:col-span-2">
         <Card>
           <CardHeader>
-            <CardTitle>Notification Details</CardTitle>
+            <CardTitle>Detalhes da Notificação</CardTitle>
           </CardHeader>
           <CardContent>
             <form class="space-y-6" @submit.prevent="sendNotification">
               <!-- App Selection -->
               <div class="space-y-2">
-                <Label for="app">Application *</Label>
+                <Label for="app">Aplicativo *</Label>
                 <Select v-model="form.appId" required>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an app" />
+                    <SelectValue placeholder="Selecione um app" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem v-for="app in (apps || [])" :key="app.id" :value="app.id">
@@ -239,11 +239,11 @@ function resetForm() {
               <!-- Notification Content -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-2">
-                  <Label for="title">Title *</Label>
+                  <Label for="title">Título *</Label>
                   <Input
                     id="title"
                     v-model="form.title"
-                    placeholder="Notification title"
+                    placeholder="Título da notificação"
                     required
                   />
                 </div>
@@ -259,11 +259,11 @@ function resetForm() {
               </div>
 
               <div class="space-y-2">
-                <Label for="body">Message *</Label>
+                <Label for="body">Mensagem *</Label>
                 <Textarea
                   id="body"
                   v-model="form.body"
-                  placeholder="Your notification message..."
+                  placeholder="Sua mensagem de notificação..."
                   required
                   rows="3"
                 />
@@ -273,14 +273,14 @@ function resetForm() {
               <Collapsible>
                 <CollapsibleTrigger as-child>
                   <Button variant="ghost" class="w-full justify-between">
-                    Advanced Options
+                    Opções Avançadas
                     <Icon name="lucide:chevron-down" class="size-4" />
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent class="space-y-4 pt-4">
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-2">
-                      <Label for="sound">Sound</Label>
+                      <Label for="sound">Som</Label>
                       <Input
                         id="sound"
                         v-model="form.sound"
@@ -288,7 +288,7 @@ function resetForm() {
                       />
                     </div>
                     <div class="space-y-2">
-                      <Label for="clickAction">Click Action</Label>
+                      <Label for="clickAction">Ação de Clique (URL)</Label>
                       <Input
                         id="clickAction"
                         v-model="form.clickAction"
@@ -299,7 +299,7 @@ function resetForm() {
 
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-2">
-                      <Label for="icon">Icon URL</Label>
+                      <Label for="icon">Ícone (URL)</Label>
                       <Input
                         id="icon"
                         v-model="form.icon"
@@ -307,7 +307,7 @@ function resetForm() {
                       />
                     </div>
                     <div class="space-y-2">
-                      <Label for="image">Image URL</Label>
+                      <Label for="image">Imagem (URL)</Label>
                       <Input
                         id="image"
                         v-model="form.image"
@@ -317,7 +317,7 @@ function resetForm() {
                   </div>
 
                   <div class="space-y-2">
-                    <Label for="data">Custom Data (JSON)</Label>
+                    <Label for="data">Dados Customizados (JSON)</Label>
                     <Textarea
                       id="data"
                       v-model="customData"
@@ -330,7 +330,7 @@ function resetForm() {
 
               <!-- Target Selection -->
               <div class="space-y-4">
-                <Label>Target Audience</Label>
+                <Label>Público Alvo</Label>
                 <div class="space-y-3">
                   <div class="flex items-center space-x-2">
                     <Checkbox
@@ -338,7 +338,7 @@ function resetForm() {
                       :model-value="targetType === 'all'"
                       @update:model-value="targetType = 'all'"
                     />
-                    <Label for="all-devices">All registered devices</Label>
+                    <Label for="all-devices">Todos os dispositivos registrados</Label>
                   </div>
 
                   <div class="flex items-center space-x-2">
@@ -347,7 +347,7 @@ function resetForm() {
                       :model-value="targetType === 'platform'"
                       @update:model-value="targetType = 'platform'"
                     />
-                    <Label for="platform-filter">Filter by platform</Label>
+                    <Label for="platform-filter">Filtrar por plataforma</Label>
                   </div>
 
                   <div v-if="targetType === 'platform'" class="ml-6 space-y-2">
@@ -373,13 +373,13 @@ function resetForm() {
                       :model-value="targetType === 'devices'"
                       @update:model-value="targetType = 'devices'"
                     />
-                    <Label for="specific-devices">Specific devices</Label>
+                    <Label for="specific-devices">Dispositivos específicos</Label>
                   </div>
 
                   <div v-if="targetType === 'devices'" class="ml-6">
                     <Textarea
                       v-model="deviceIds"
-                      placeholder="Enter device IDs, one per line"
+                      placeholder="Insira os IDs dos dispositivos, um por linha"
                       rows="3"
                     />
                   </div>
@@ -388,7 +388,7 @@ function resetForm() {
 
               <!-- Schedule -->
               <div class="space-y-4">
-                <Label>Schedule</Label>
+                <Label>Agendamento</Label>
                 <div class="space-y-2">
                 <div class="flex items-center space-x-2">
                   <Checkbox
@@ -396,7 +396,7 @@ function resetForm() {
                       :model-value="scheduleType === 'now' && !multipleScheduleEnabled"
                       @update:model-value="scheduleType = 'now'; multipleScheduleEnabled = false"
                   />
-                  <Label for="send-now">Send now</Label>
+                  <Label for="send-now">Enviar agora</Label>
                 </div>
                 <div class="flex items-center space-x-2">
                   <Checkbox
@@ -404,7 +404,7 @@ function resetForm() {
                       :model-value="scheduleType === 'later' && !multipleScheduleEnabled"
                       @update:model-value="scheduleType = 'later'; multipleScheduleEnabled = false"
                   />
-                    <Label for="schedule-later">Schedule for later (single)</Label>
+                    <Label for="schedule-later">Agendar para depois (único)</Label>
                 </div>
                   <div v-if="scheduleType === 'later' && !multipleScheduleEnabled" class="ml-6">
                   <Input
@@ -419,7 +419,7 @@ function resetForm() {
                       :model-value="multipleScheduleEnabled"
                       @update:model-value="multipleScheduleEnabled = $event; if ($event) scheduleType = 'later'"
                     />
-                    <Label for="multiple-schedule">Multiple schedule (days + times)</Label>
+                    <Label for="multiple-schedule">Agendamento múltiplo (dias + horários)</Label>
                   </div>
                 </div>
 
@@ -512,14 +512,14 @@ function resetForm() {
                   <Icon name="lucide:send" class="size-4 mr-2" />
                   {{
                     scheduleType === 'now'
-                      ? 'Send Now'
+                      ? 'Enviar Agora'
                       : multipleScheduleEnabled
-                        ? `Schedule ${getTotalNotificationsCount()} Notifications`
-                        : 'Schedule'
+                        ? `Agendar ${getTotalNotificationsCount()} Notificações`
+                        : 'Agendar'
                   }}
                 </Button>
                 <Button type="button" variant="outline" @click="resetForm">
-                  Reset
+                  Limpar
                 </Button>
               </div>
             </form>
@@ -531,14 +531,14 @@ function resetForm() {
       <div>
         <Card class="sticky top-4">
           <CardHeader>
-            <CardTitle>Preview</CardTitle>
+            <CardTitle>Pré-visualização</CardTitle>
           </CardHeader>
           <CardContent>
             <!-- Mobile Preview -->
             <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 space-y-3">
               <div class="flex items-center space-x-2 text-xs text-muted-foreground">
                 <Icon name="lucide:smartphone" class="h-3 w-3" />
-                <span>Mobile Notification</span>
+                <span>Notificação Móvel</span>
               </div>
 
               <div class="bg-white dark:bg-gray-900 rounded-lg p-3 shadow-sm">
@@ -551,15 +551,15 @@ function resetForm() {
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between">
                       <p class="font-medium text-sm truncate">
-                        {{ selectedApp?.name || 'App Name' }}
+                        {{ selectedApp?.name || 'Nome do App' }}
                       </p>
-                      <span class="text-xs text-muted-foreground">now</span>
+                      <span class="text-xs text-muted-foreground">agora</span>
                     </div>
                     <p class="font-semibold text-sm mb-1">
-                      {{ form.title || 'Notification Title' }}
+                      {{ form.title || 'Título da Notificação' }}
                     </p>
                     <p class="text-sm text-muted-foreground line-clamp-2">
-                      {{ form.body || 'Your notification message will appear here...' }}
+                      {{ form.body || 'Sua mensagem de notificação aparecerá aqui...' }}
                     </p>
                   </div>
                   <div v-if="form.badge" class="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
@@ -572,7 +572,7 @@ function resetForm() {
             <!-- Targeting Info -->
             <div class="mt-4 space-y-2 text-sm">
               <div class="flex justify-between">
-                <span class="text-muted-foreground">Target:</span>
+                <span class="text-muted-foreground">Alvo:</span>
                 <span>{{ getTargetDescription() }}</span>
               </div>
               <div v-if="selectedApp" class="flex justify-between">
@@ -580,14 +580,14 @@ function resetForm() {
                 <span>{{ selectedApp.name }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-muted-foreground">Schedule:</span>
+                <span class="text-muted-foreground">Agendamento:</span>
                 <span>
                   {{
                     scheduleType === 'now'
-                      ? 'Send immediately'
+                      ? 'Enviar imediatamente'
                       : multipleScheduleEnabled
-                        ? `${getTotalNotificationsCount()} scheduled`
-                        : 'Scheduled'
+                        ? `${getTotalNotificationsCount()} agendadas`
+                        : 'Agendado'
                   }}
                 </span>
               </div>

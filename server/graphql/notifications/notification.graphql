@@ -47,6 +47,7 @@ type Notification {
   createdAt: Timestamp!
   updatedAt: Timestamp!
   sentAt: Timestamp
+  automationId: ID
 }
 
 type DeliveryLog {
@@ -87,8 +88,12 @@ input SendNotificationInput {
   scheduleTimes: [ScheduleTimeInput!] # Para agendamento múltiplo (novo)
 }
 
+input NotificationFilterInput {
+  isAutomation: Boolean
+}
+
 extend type Query {
-  notifications(appId: ID): [Notification!]!
+  notifications(appId: ID, filter: NotificationFilterInput): [Notification!]!
   notification(id: ID!): Notification
   deliveryLogs(notificationId: ID): [DeliveryLog!]!
 }
