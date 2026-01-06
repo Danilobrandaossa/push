@@ -17,12 +17,13 @@ async function processSendNotification(job: Job<SendNotificationJobData>) {
   try {
     const provider = await getProviderForApp(appId, platform)
 
-    // Build notification payload
     // Wrap click action with tracking URL if configured
     let clickAction = payload.clickAction
-    if (clickAction && process.env.APP_URL) {
+    const appUrl = process.env.APP_URL || 'https://gteck.up.railway.app'
+
+    if (clickAction && appUrl) {
       // Ensure APP_URL doesn't end with slash
-      const baseUrl = process.env.APP_URL.endsWith('/') ? process.env.APP_URL.slice(0, -1) : process.env.APP_URL
+      const baseUrl = appUrl.endsWith('/') ? appUrl.slice(0, -1) : appUrl
       const encodedUrl = encodeURIComponent(clickAction)
       clickAction = `${baseUrl}/api/tracking/click?u=${encodedUrl}&n=${notificationId}&d=${deviceId}`
     }
