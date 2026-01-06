@@ -95,7 +95,7 @@ function addScheduleTime() {
     
     const targetDate = new Date(today)
     targetDate.setDate(today.getDate() + daysUntil)
-    const dateStr = targetDate.toISOString().split('T')[0]
+    const dateStr = targetDate.toISOString().split('T')[0] || ''
 
     const existing = scheduleTimes.value.find(st => st.date === dateStr)
     if (existing) {
@@ -417,7 +417,7 @@ function resetForm() {
                     <Checkbox
                       id="multiple-schedule"
                       :model-value="multipleScheduleEnabled"
-                      @update:model-value="multipleScheduleEnabled = $event; if ($event) scheduleType = 'later'"
+                      @update:model-value="multipleScheduleEnabled = !!$event; if ($event) scheduleType = 'later'"
                     />
                     <Label for="multiple-schedule">Agendamento múltiplo (dias + horários)</Label>
                   </div>

@@ -361,7 +361,7 @@ const onSubmit = handleSubmit(async (values) => {
       setValues({
         subject: result.vapidSubject || values.subject,
         publicKey: result.vapidPublicKey || values.publicKey,
-        privateKey: result.vapidPrivateKey || values.privateKey,
+        privateKey: (result as any).vapidPrivateKey || values.privateKey,
       })
 
       successToast('Web Push configurado com sucesso', 'Sua configuração VAPID foi salva.')
