@@ -39,6 +39,8 @@ const _selectedApp = computed(() => {
 
 const { mutate: sendNotification, isLoading: isSending } = useSendNotification()
 
+import { formatDate } from '~/utils/date'
+
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
     DELIVERED: 'ENTREGUE',
@@ -232,12 +234,9 @@ async function sendTestNotification() {
                     {{ getStatusLabel(notification.status) }}
                   </span>
                   <span class="text-xs text-muted-foreground">
-                    {{ new Intl.DateTimeFormat('pt-BR', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    }).format(new Date(notification.createdAt)) }}
+                    <ClientOnly>
+                      {{ formatDate(notification.createdAt) }}
+                    </ClientOnly>
                   </span>
                 </div>
               </div>

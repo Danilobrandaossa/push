@@ -198,26 +198,7 @@ const registrationChartData = computed(() => {
   return { days: last7Days, maxCount }
 })
 
-function formatLastSeen(date: string | null | undefined) {
-  if (!date)
-    return 'Nunca'
-  const now = new Date()
-  const lastSeen = new Date(date)
-  const diffMs = now.getTime() - lastSeen.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffMinutes = Math.floor(diffMs / (1000 * 60))
 
-  if (diffMinutes < 1)
-    return 'Agora mesmo'
-  if (diffMinutes < 60)
-    return `há ${diffMinutes}m`
-  if (diffHours < 24)
-    return `há ${diffHours}h`
-  if (diffDays === 1)
-    return 'Ontem'
-  return `há ${diffDays}d`
-}
 
 function getPlatformIcon(category: string | null, platform: string, metadata?: string) {
   // Use category first if available
@@ -311,14 +292,7 @@ function getTokenType(platform: string): string {
   }
 }
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-}
+
 
 function getOSInfo(metadata?: string): string | null {
   if (!metadata)
@@ -467,10 +441,15 @@ async function confirmDeleteDevice() {
   }
 }
 
+
 function refreshDevices() {
   // Refresh devices list by invalidating the query
   queryCache.invalidateQueries({ key: ['devices', appId.value] })
 }
+
+import { formatDate, formatTimeAgo as formatLastSeen } from '~/utils/date'
+
+// Apps are automatically loaded by useApps() composable
 </script>
 
 <template>
@@ -832,9 +811,15 @@ function refreshDevices() {
                 </TableCell>
                 <TableCell>
                   <div class="text-sm">
-                    <div class="font-medium">{{ formatLastSeen(device.lastSeenAt) }}</div>
+                    <div class="font-medium">
+                      <ClientOnly>
+                        {{ formatLastSeen(device.lastSeenAt) }}
+                      </ClientOnly>
+                    </div>
                     <div class="text-xs text-muted-foreground">
-                      {{ device.createdAt ? formatDate(new Date(device.createdAt)) : 'Desconhecido' }}
+                      <ClientOnly>
+                        {{ device.createdAt ? formatDate(device.createdAt) : 'Desconhecido' }}
+                      </ClientOnly>
                     </div>
                   </div>
                 </TableCell>

@@ -123,6 +123,8 @@ const notificationStats = computed(() => {
   return stats
 })
 
+import { formatDate, formatTimeAgo } from '~/utils/date'
+
 function getStatusBadge(status: string) {
   switch (status) {
     case 'DELIVERED':
@@ -140,33 +142,6 @@ function getStatusBadge(status: string) {
   }
 }
 
-function formatDate(dateString: string | null | undefined) {
-  if (!dateString)
-    return 'Não enviado'
-  return new Intl.DateTimeFormat('pt-BR', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(dateString))
-}
-
-function formatTimeAgo(dateString: string) {
-  const now = new Date()
-  const date = new Date(dateString)
-  const diffMs = now.getTime() - date.getTime()
-  const diffMinutes = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffMinutes < 1)
-    return 'Agora mesmo'
-  if (diffMinutes < 60)
-    return `${diffMinutes}m atrás`
-  if (diffHours < 24)
-    return `${diffHours}h atrás`
-  return `${diffDays}d atrás`
-}
 
 function getDeliveryRate(notification: any) {
   if (notification.totalTargets === 0)
@@ -467,10 +442,17 @@ function refreshNotifications() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div class="space-y-1">
-                      <div class="text-sm font-medium">{{ formatDate(notification.sentAt) }}</div>
-                      <div class="text-xs text-muted-foreground">{{ formatTimeAgo(notification.createdAt) }}</div>
+                    <div class="flex flex-col">
+                      <ClientOnly>
+                        <span class="font-medium">{{ formatDate(notification.createdAt) }}</span>
+                        <span class="text-xs text-muted-foreground">{{ formatTimeAgo(notification.createdAt) }}</span>
+                      </ClientOnly>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <ClientOnly>
+                      {{ notification.sentAt ? formatDate(notification.sentAt) : '-' }}
+                    </ClientOnly>
                   </TableCell>
                   <TableCell class="text-center">
                     <Button variant="ghost" size="sm" @click="viewNotificationDetails(notification.id)">
@@ -558,11 +540,19 @@ function refreshNotifications() {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <Label class="text-sm font-medium">Criado em</Label>
-            <p class="mt-1 text-sm text-muted-foreground">{{ formatDate(selectedNotification.createdAt) }}</p>
+            <p class="mt-1 text-sm text-muted-foreground">
+              <ClientOnly>
+                {{ formatDate(selectedNotification.createdAt) }}
+              </ClientOnly>
+            </p>
           </div>
           <div v-if="selectedNotification.sentAt">
             <Label class="text-sm font-medium">Enviado em</Label>
-            <p class="mt-1 text-sm text-muted-foreground">{{ formatDate(selectedNotification.sentAt) }}</p>
+            <p class="mt-1 text-sm text-muted-foreground">
+              <ClientOnly>
+                {{ formatDate(selectedNotification.sentAt) }}
+              </ClientOnly>
+            </p>
           </div>
         </div>
 
