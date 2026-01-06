@@ -26,12 +26,12 @@ const { refetch: generateVapidKeys, isLoading: isGenerating } = useGenerateVapid
 
 // Form validation schema
 const formSchema = z.object({
-  subject: z.string().min(1, 'Subject is required').refine(
+  subject: z.string().min(1, 'Assunto é obrigatório').refine(
     val => val.startsWith('mailto:') || val.startsWith('https://'),
-    'Subject must be a mailto: email or https: URL',
+    'O assunto deve ser um email mailto: ou URL https:',
   ),
-  publicKey: z.string().min(1, 'Public key is required'),
-  privateKey: z.string().min(1, 'Private key is required'),
+  publicKey: z.string().min(1, 'Chave pública é obrigatória'),
+  privateKey: z.string().min(1, 'Chave privada é obrigatória'),
 })
 
 // Form setup
@@ -266,7 +266,7 @@ add_action('wp_enqueue_scripts', 'nitroping_enqueue_scripts');
     } else {
         registerPushNotifications();
     }
-})();
+ })();
 */
 
 // Service Worker (salve como /sw.js na raiz do WordPress)
@@ -335,12 +335,12 @@ async function generateKeys() {
         setFieldValue('subject', 'mailto:admin@example.com')
       }
 
-      successToast('VAPID keys generated successfully', 'New keys have been generated and populated in the form.')
+      successToast('Chaves VAPID geradas com sucesso', 'Novas chaves foram geradas e preenchidas no formulário.')
     }
   }
   catch (error) {
     console.error('Error generating VAPID keys:', error)
-    errorToast('Failed to generate VAPID keys', 'Please try again or check your configuration.')
+    errorToast('Falha ao gerar chaves VAPID', 'Por favor tente novamente ou verifique sua configuração.')
   }
 }
 
@@ -364,7 +364,7 @@ const onSubmit = handleSubmit(async (values) => {
         privateKey: result.vapidPrivateKey || values.privateKey,
       })
 
-      successToast('Web Push configured successfully', 'Your VAPID configuration has been saved.')
+      successToast('Web Push configurado com sucesso', 'Sua configuração VAPID foi salva.')
 
       // Wait a bit for cache to update, then navigate back
       setTimeout(() => {
@@ -374,8 +374,8 @@ const onSubmit = handleSubmit(async (values) => {
   }
   catch (error) {
     console.error('Error configuring Web Push:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Please check your settings and try again.'
-    errorToast('Failed to configure Web Push', errorMessage)
+    const errorMessage = error instanceof Error ? error.message : 'Por favor verifique suas configurações e tente novamente.'
+    errorToast('Falha ao configurar Web Push', errorMessage)
   }
 })
 
@@ -400,8 +400,8 @@ const hasExistingConfig = computed(() => {
         <Icon name="lucide:arrow-left" class="size-4" />
       </Button>
       <div>
-        <h1 class="text-3xl font-bold mb-1">Configure Web Push</h1>
-        <p class="text-muted-foreground">Set up push notifications for web browsers</p>
+        <h1 class="text-3xl font-bold mb-1">Configurar Web Push</h1>
+        <p class="text-muted-foreground">Configure notificações push para navegadores web</p>
       </div>
     </div>
 
@@ -412,15 +412,15 @@ const hasExistingConfig = computed(() => {
         <CardHeader>
           <CardTitle class="flex items-center space-x-2">
             <Icon name="lucide:check" class="h-5 w-5 text-green-600" />
-            <span>Web Push Currently Configured</span>
+            <span>Web Push Atualmente Configurado</span>
           </CardTitle>
-          <CardDescription>Your app is currently set up to send push notifications to web browsers</CardDescription>
+          <CardDescription>Seu app está configurado para enviar notificações push para navegadores web</CardDescription>
         </CardHeader>
         <CardContent>
           <div class="space-y-2">
-            <p class="text-sm"><strong>Subject:</strong> {{ app.vapidSubject }}</p>
-            <p class="text-sm"><strong>Public Key:</strong> {{ app.vapidPublicKey?.substring(0, 32) }}...</p>
-            <p class="text-sm text-muted-foreground">Private key is securely stored and encrypted.</p>
+            <p class="text-sm"><strong>Assunto:</strong> {{ app.vapidSubject }}</p>
+            <p class="text-sm"><strong>Chave Pública:</strong> {{ app.vapidPublicKey?.substring(0, 32) }}...</p>
+            <p class="text-sm text-muted-foreground">Chave privada armazenada e criptografada com segurança.</p>
           </div>
         </CardContent>
       </Card>
@@ -428,37 +428,37 @@ const hasExistingConfig = computed(() => {
       <!-- Configuration Guide -->
       <Card>
         <CardHeader>
-          <CardTitle>Setup Guide</CardTitle>
-          <CardDescription>Web Push uses VAPID (Voluntary Application Server Identification) for authentication</CardDescription>
+          <CardTitle>Guia de Configuração</CardTitle>
+          <CardDescription>Web Push usa VAPID (Voluntary Application Server Identification) para autenticação</CardDescription>
         </CardHeader>
         <CardContent>
           <ol class="space-y-3 text-sm">
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">1</span>
               <div>
-                <p class="font-medium">Generate VAPID Keys</p>
-                <p class="text-muted-foreground">Click "Generate New Keys" below to create a public/private key pair</p>
+                <p class="font-medium">Gere Chaves VAPID</p>
+                <p class="text-muted-foreground">Clique em "Gerar Novas Chaves" abaixo para criar um par de chaves pública/privada</p>
               </div>
             </li>
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">2</span>
               <div>
-                <p class="font-medium">Set Subject</p>
-                <p class="text-muted-foreground">Provide a contact email or website URL for identification</p>
+                <p class="font-medium">Defina o Assunto</p>
+                <p class="text-muted-foreground">Forneça um email de contato ou URL do site para identificação</p>
               </div>
             </li>
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">3</span>
               <div>
-                <p class="font-medium">Use Public Key in Client</p>
-                <p class="text-muted-foreground">Use the public key in your web app's service worker for subscriptions</p>
+                <p class="font-medium">Use a Chave Pública no Cliente</p>
+                <p class="text-muted-foreground">Use a chave pública no service worker do seu web app para inscrições</p>
               </div>
             </li>
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">4</span>
               <div>
-                <p class="font-medium">Test Notifications</p>
-                <p class="text-muted-foreground">Register devices and test push notifications from your dashboard</p>
+                <p class="font-medium">Teste Notificações</p>
+                <p class="text-muted-foreground">Registre dispositivos e teste notificações push do seu painel</p>
               </div>
             </li>
           </ol>
@@ -470,8 +470,8 @@ const hasExistingConfig = computed(() => {
         <CardHeader>
           <div class="flex items-center justify-between">
             <div>
-              <CardTitle>Web Push Configuration</CardTitle>
-              <CardDescription>Enter your VAPID credentials for web push notifications</CardDescription>
+              <CardTitle>Configuração Web Push</CardTitle>
+              <CardDescription>Insira suas credenciais VAPID para notificações web push</CardDescription>
             </div>
             <Button
               type="button"
@@ -481,7 +481,7 @@ const hasExistingConfig = computed(() => {
             >
               <Icon v-if="isGenerating" name="lucide:loader-2" class="mr-2 size-4 animate-spin" />
               <Icon v-else name="lucide:key" class="mr-2 size-4" />
-              Generate New Keys
+              Gerar Novas Chaves
             </Button>
           </div>
         </CardHeader>
@@ -490,16 +490,16 @@ const hasExistingConfig = computed(() => {
             <!-- Subject -->
             <FormField v-slot="{ componentField }" name="subject">
               <FormItem>
-                <FormLabel class="required">Subject</FormLabel>
+                <FormLabel class="required">Assunto (Subject)</FormLabel>
                 <FormControl>
                   <Input
                     v-bind="componentField"
-                    placeholder="mailto:admin@yourapp.com or https://yourapp.com"
+                    placeholder="mailto:admin@seuapp.com ou https://seuapp.com"
                     :disabled="isSubmitting || isConfiguring"
                   />
                 </FormControl>
                 <FormDescription>
-                  Your contact email (mailto:) or website URL (https://) for VAPID identification
+                  Seu email de contato (mailto:) ou URL do site (https://) para identificação VAPID
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -508,7 +508,7 @@ const hasExistingConfig = computed(() => {
             <!-- Public Key -->
             <FormField v-slot="{ componentField }" name="publicKey">
               <FormItem>
-                <FormLabel class="required">VAPID Public Key</FormLabel>
+                <FormLabel class="required">Chave Pública VAPID</FormLabel>
                 <FormControl>
                   <Textarea
                     v-bind="componentField"
@@ -519,7 +519,7 @@ const hasExistingConfig = computed(() => {
                   />
                 </FormControl>
                 <FormDescription>
-                  Your VAPID public key (will be used in your web app's client code)
+                  Sua chave pública VAPID (será usada no código cliente do seu web app)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -528,7 +528,7 @@ const hasExistingConfig = computed(() => {
             <!-- Private Key -->
             <FormField v-slot="{ componentField }" name="privateKey">
               <FormItem>
-                <FormLabel class="required">VAPID Private Key</FormLabel>
+                <FormLabel class="required">Chave Privada VAPID</FormLabel>
                 <FormControl>
                   <Textarea
                     v-bind="componentField"
@@ -539,7 +539,7 @@ const hasExistingConfig = computed(() => {
                   />
                 </FormControl>
                 <FormDescription>
-                  Your VAPID private key (keep this secret and secure)
+                  Sua chave privada VAPID (mantenha secreta e segura)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -548,18 +548,18 @@ const hasExistingConfig = computed(() => {
             <!-- Key Generation Help -->
             <Alert>
               <Icon name="lucide:refresh-cw" class="size-4" />
-              <AlertTitle>Need VAPID Keys?</AlertTitle>
+              <AlertTitle>Precisa de Chaves VAPID?</AlertTitle>
               <AlertDescription>
-                If you don't have VAPID keys yet, click "Generate New Keys" above to create a new key pair automatically.
+                Se você ainda não tem chaves VAPID, clique em "Gerar Novas Chaves" acima para criar um par de chaves automaticamente.
               </AlertDescription>
             </Alert>
 
             <!-- Security Warning -->
             <Alert>
               <Icon name="lucide:alert-triangle" class="size-4" />
-              <AlertTitle>Security Notice</AlertTitle>
+              <AlertTitle>Aviso de Segurança</AlertTitle>
               <AlertDescription>
-                Your private key will be encrypted and securely stored. The public key will be used in your web app's client code to subscribe users to push notifications.
+                Sua chave privada será criptografada e armazenada com segurança. A chave pública será usada no código cliente do web app para inscrever usuários em notificações push.
               </AlertDescription>
             </Alert>
 
@@ -572,10 +572,10 @@ const hasExistingConfig = computed(() => {
               >
                 <Icon v-if="isSubmitting || isConfiguring" name="lucide:loader-2" class="size-4 mr-2 animate-spin" />
                 <Icon v-else name="lucide:save" class="size-4 mr-2" />
-                {{ hasExistingConfig ? 'Update Configuration' : 'Save Configuration' }}
+                {{ hasExistingConfig ? 'Atualizar Configuração' : 'Salvar Configuração' }}
               </Button>
               <Button type="button" variant="outline" @click="goBack">
-                Cancel
+                Cancelar
               </Button>
             </div>
           </form>
@@ -648,18 +648,18 @@ const hasExistingConfig = computed(() => {
       <!-- Implementation Example -->
       <Card>
         <CardHeader>
-          <CardTitle>Client Implementation</CardTitle>
-          <CardDescription>Example code for your web application</CardDescription>
+          <CardTitle>Implementação no Cliente</CardTitle>
+          <CardDescription>Código de exemplo para sua aplicação web</CardDescription>
         </CardHeader>
         <CardContent>
           <div class="space-y-4">
             <div>
-              <h4 class="font-medium mb-2">Service Worker Registration</h4>
+              <h4 class="font-medium mb-2">Registro do Service Worker</h4>
               <pre class="bg-muted p-3 rounded text-xs overflow-x-auto"><code>// Register service worker and subscribe to push
 const registration = await navigator.serviceWorker.register('/sw.js');
 const subscription = await registration.pushManager.subscribe({
   userVisibleOnly: true,
-  applicationServerKey: '{{ app.vapidPublicKey || "YOUR_PUBLIC_KEY" }}'
+  applicationServerKey: '{{ app.vapidPublicKey || "SUA_CHAVE_PUBLICA" }}'
 });
 
 // Send subscription to your server
@@ -682,7 +682,7 @@ await fetch('/api/v1/devices/register', {
       <!-- Additional Resources -->
       <Card>
         <CardHeader>
-          <CardTitle>Additional Resources</CardTitle>
+          <CardTitle>Recursos Adicionais</CardTitle>
         </CardHeader>
         <CardContent>
           <div class="space-y-3">
@@ -692,7 +692,7 @@ await fetch('/api/v1/devices/register', {
               class="flex items-center space-x-2 text-sm text-primary hover:underline"
             >
               <Icon name="lucide:file-text" class="size-4" />
-              <span>MDN Push API Documentation</span>
+              <span>Documentação MDN Push API</span>
             </a>
             <a
               href="https://web.dev/push-notifications/"
@@ -700,7 +700,7 @@ await fetch('/api/v1/devices/register', {
               class="flex items-center space-x-2 text-sm text-primary hover:underline"
             >
               <Icon name="lucide:file-text" class="size-4" />
-              <span>Web Push Notifications Guide</span>
+              <span>Guia de Notificações Web Push</span>
             </a>
             <a
               href="https://tools.ietf.org/html/rfc8292"
@@ -708,7 +708,7 @@ await fetch('/api/v1/devices/register', {
               class="flex items-center space-x-2 text-sm text-primary hover:underline"
             >
               <Icon name="lucide:file-text" class="size-4" />
-              <span>VAPID Specification (RFC 8292)</span>
+              <span>Especificação VAPID (RFC 8292)</span>
             </a>
           </div>
         </CardContent>
