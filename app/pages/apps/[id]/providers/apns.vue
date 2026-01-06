@@ -26,9 +26,9 @@ const { mutateAsync: configureAPNsMutation, isLoading: isConfiguring } = useConf
 
 // Form validation schema
 const formSchema = z.object({
-  keyId: z.string().min(1, 'Key ID is required').max(10, 'Key ID should be 10 characters'),
-  teamId: z.string().min(1, 'Team ID is required').max(10, 'Team ID should be 10 characters'),
-  privateKey: z.string().min(1, 'Private key is required'),
+  keyId: z.string().min(1, 'Key ID é obrigatório').max(10, 'Key ID deve ter 10 caracteres'),
+  teamId: z.string().min(1, 'Team ID é obrigatório').max(10, 'Team ID deve ter 10 caracteres'),
+  privateKey: z.string().min(1, 'Chave privada é obrigatória'),
   bundleId: z.string().optional(),
   isProduction: z.boolean().default(false),
 })
@@ -105,8 +105,8 @@ const hasExistingConfig = computed(() => {
         <Icon name="lucide:arrow-left" class="size-4" />
       </Button>
       <div>
-        <h1 class="text-3xl font-bold mb-1">Configure Apple APNs</h1>
-        <p class="text-muted-foreground">Set up push notifications for iOS devices</p>
+        <h1 class="text-3xl font-bold mb-1">Configurar Apple APNs</h1>
+        <p class="text-muted-foreground">Configure notificações push para dispositivos iOS</p>
       </div>
     </div>
 
@@ -117,15 +117,15 @@ const hasExistingConfig = computed(() => {
         <CardHeader>
           <CardTitle class="flex items-center space-x-2">
             <Icon name="lucide:check" class="h-5 w-5 text-green-600" />
-            <span>APNs Currently Configured</span>
+            <span>APNs Atualmente Configurado</span>
           </CardTitle>
-          <CardDescription>Your app is currently set up to send push notifications to iOS devices</CardDescription>
+          <CardDescription>Seu app está configurado para enviar notificações push para dispositivos iOS</CardDescription>
         </CardHeader>
         <CardContent>
           <div class="space-y-2">
             <p class="text-sm"><strong>Key ID:</strong> {{ app.apnsKeyId }}</p>
             <p class="text-sm"><strong>Team ID:</strong> {{ app.apnsTeamId }}</p>
-            <p class="text-sm text-muted-foreground">Private key is securely stored and encrypted.</p>
+            <p class="text-sm text-muted-foreground">Chave privada armazenada e criptografada com segurança.</p>
           </div>
         </CardContent>
       </Card>
@@ -133,37 +133,37 @@ const hasExistingConfig = computed(() => {
       <!-- Configuration Guide -->
       <Card>
         <CardHeader>
-          <CardTitle>Setup Guide</CardTitle>
-          <CardDescription>Follow these steps to get your APNs credentials from Apple Developer Console</CardDescription>
+          <CardTitle>Guia de Configuração</CardTitle>
+          <CardDescription>Siga estes passos para obter suas credenciais APNs do Console de Desenvolvedor da Apple</CardDescription>
         </CardHeader>
         <CardContent>
           <ol class="space-y-3 text-sm">
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">1</span>
               <div>
-                <p class="font-medium">Login to Apple Developer Console</p>
-                <p class="text-muted-foreground">Go to developer.apple.com and sign in with your developer account</p>
+                <p class="font-medium">Entre no Console de Desenvolvedor da Apple</p>
+                <p class="text-muted-foreground">Vá para developer.apple.com e faça login com sua conta de desenvolvedor</p>
               </div>
             </li>
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">2</span>
               <div>
-                <p class="font-medium">Create APNs Auth Key</p>
-                <p class="text-muted-foreground">Navigate to Keys section and create a new key with APNs service enabled</p>
+                <p class="font-medium">Crie Chave de Autenticação APNs</p>
+                <p class="text-muted-foreground">Navegue até a seção Keys e crie uma nova chave com o serviço APNs ativado</p>
               </div>
             </li>
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">3</span>
               <div>
-                <p class="font-medium">Download .p8 file</p>
-                <p class="text-muted-foreground">Download the private key file and note your Key ID and Team ID</p>
+                <p class="font-medium">Baixe o arquivo .p8</p>
+                <p class="text-muted-foreground">Baixe o arquivo da chave privada e anote seu Key ID e Team ID</p>
               </div>
             </li>
             <li class="flex items-start space-x-3">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">4</span>
               <div>
-                <p class="font-medium">Configure below</p>
-                <p class="text-muted-foreground">Enter your credentials in the form below</p>
+                <p class="font-medium">Configure abaixo</p>
+                <p class="text-muted-foreground">Insira suas credenciais no formulário abaixo</p>
               </div>
             </li>
           </ol>
@@ -173,8 +173,8 @@ const hasExistingConfig = computed(() => {
       <!-- Configuration Form -->
       <Card>
         <CardHeader>
-          <CardTitle>APNs Configuration</CardTitle>
-          <CardDescription>Enter your Apple Push Notification service credentials</CardDescription>
+          <CardTitle>Configuração APNs</CardTitle>
+          <CardDescription>Insira suas credenciais do serviço de notificação push da Apple</CardDescription>
         </CardHeader>
         <CardContent>
           <form class="space-y-6" @submit="onSubmit">
@@ -191,7 +191,7 @@ const hasExistingConfig = computed(() => {
                   />
                 </FormControl>
                 <FormDescription>
-                  10-character identifier for your APNs Auth Key (found in Apple Developer Console)
+                  Identificador de 10 caracteres da sua chave de autenticação APNs (encontrado no Console da Apple)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -210,7 +210,7 @@ const hasExistingConfig = computed(() => {
                   />
                 </FormControl>
                 <FormDescription>
-                  Your Apple Developer Team ID (found in Apple Developer Console)
+                  Seu ID de equipe de desenvolvedor Apple (encontrado no Console da Apple)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -219,7 +219,7 @@ const hasExistingConfig = computed(() => {
             <!-- Private Key -->
             <FormField v-slot="{ componentField }" name="privateKey">
               <FormItem>
-                <FormLabel class="required">Private Key (.p8 file content)</FormLabel>
+                <FormLabel class="required">Chave Privada (conteúdo do arquivo .p8)</FormLabel>
                 <FormControl>
                   <Textarea
                     v-bind="componentField"
@@ -232,7 +232,7 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg...
                   />
                 </FormControl>
                 <FormDescription>
-                  Paste the entire content of your .p8 private key file here
+                  Cole todo o conteúdo do seu arquivo de chave privada .p8 aqui
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -241,16 +241,16 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg...
             <!-- Bundle ID (Optional) -->
             <FormField v-slot="{ componentField }" name="bundleId">
               <FormItem>
-                <FormLabel>Bundle ID (Optional)</FormLabel>
+                <FormLabel>Bundle ID (Opcional)</FormLabel>
                 <FormControl>
                   <Input
                     v-bind="componentField"
-                    placeholder="com.yourcompany.yourapp"
+                    placeholder="com.suaempresa.seuapp"
                     :disabled="isSubmitting || isConfiguring"
                   />
                 </FormControl>
                 <FormDescription>
-                  Your iOS app's bundle identifier (leave empty if using wildcard certificate)
+                  Identificador do seu aplicativo iOS (deixe em branco se usar certificado curinga)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -260,9 +260,9 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg...
             <FormField v-slot="{ componentField }" name="isProduction">
               <FormItem class="flex flex-row items-center justify-between rounded-lg border p-4">
                 <div class="space-y-0.5">
-                  <FormLabel class="text-base">Production Environment</FormLabel>
+                  <FormLabel class="text-base">Ambiente de Produção</FormLabel>
                   <FormDescription>
-                    Use Apple's production APNs servers (recommended for live apps)
+                    Usar servidores APNs de produção (recomendado para apps publicados)
                   </FormDescription>
                 </div>
                 <FormControl>
@@ -277,9 +277,9 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg...
             <!-- Security Warning -->
             <Alert>
               <Icon name="lucide:alert-triangle" class="size-4" />
-              <AlertTitle>Security Notice</AlertTitle>
+              <AlertTitle>Aviso de Segurança</AlertTitle>
               <AlertDescription>
-                Your private key will be encrypted and securely stored. We recommend using environment-specific keys and rotating them regularly.
+                Sua chave privada será criptografada e armazenada com segurança. Recomendamos o uso de chaves específicas para cada ambiente e a rotação regular das mesmas.
               </AlertDescription>
             </Alert>
 
@@ -292,10 +292,10 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg...
               >
                 <Icon v-if="isSubmitting || isConfiguring" name="lucide:loader-2" class="size-4 mr-2 animate-spin" />
                 <Icon v-else name="lucide:save" class="size-4 mr-2" />
-                {{ hasExistingConfig ? 'Update Configuration' : 'Save Configuration' }}
+                {{ hasExistingConfig ? 'Atualizar Configuração' : 'Salvar Configuração' }}
               </Button>
               <Button type="button" variant="outline" @click="goBack">
-                Cancel
+                Cancelar
               </Button>
             </div>
           </form>
@@ -305,7 +305,7 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg...
       <!-- Additional Resources -->
       <Card>
         <CardHeader>
-          <CardTitle>Additional Resources</CardTitle>
+          <CardTitle>Recursos Adicionais</CardTitle>
         </CardHeader>
         <CardContent>
           <div class="space-y-3">
@@ -315,7 +315,7 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg...
               class="flex items-center space-x-2 text-sm text-primary hover:underline"
             >
               <Icon name="lucide:file-text" class="size-4" />
-              <span>Apple APNs Documentation</span>
+              <span>Documentação Apple APNs</span>
             </a>
             <a
               href="https://developer.apple.com/account/resources/authkeys/list"
@@ -323,7 +323,7 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg...
               class="flex items-center space-x-2 text-sm text-primary hover:underline"
             >
               <Icon name="lucide:file-text" class="size-4" />
-              <span>Manage APNs Auth Keys</span>
+              <span>Gerenciar Chaves de Autenticação APNs</span>
             </a>
           </div>
         </CardContent>
